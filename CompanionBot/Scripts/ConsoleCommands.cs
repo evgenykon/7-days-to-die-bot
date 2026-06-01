@@ -241,32 +241,38 @@ Advanced Features (Phase 10):
 
             try
             {
-                var spawnPos = player.position + new Vector3(2, 0, 2);
+                Vector3 lookDir = Quaternion.Euler(0, player.rotation.y, 0) * Vector3.forward;
+                var spawnPos = player.position + lookDir * 3f;
+                spawnPos.y += 1f;
+                if (Physics.Raycast(spawnPos, Vector3.down, out var hit, 20f))
+                {
+                    spawnPos = hit.point + Vector3.up * 0.5f;
+                }
+                else if (GameManager.Instance?.World != null)
+                {
+                    float groundY = GameManager.Instance.World.GetHeightAt(spawnPos.x, spawnPos.z);
+                    spawnPos.y = groundY + 0.5f;
+                }
                 var entity = GameApi.CreateEntity(entityType, spawnPos);
                 if (entity == null)
                 {
                     Output(_senderInfo, $"Failed to create entity: {entityType}");
                     return;
                 }
-                int entityId = entity.entityId;
 
-                if (entityId > 0)
+                var companion = entity as EntityAlive;
+                if (companion == null)
                 {
-                    var companion = GameManager.Instance.World.GetEntity(entityId) as EntityAlive;
-                    if (companion != null)
-                    {
-                        CompanionManager.RegisterCompanion(companion, player, gender);
-                        Output(_senderInfo, $"Companion spawned! Type: {entityType}, ID: {entityId}");
-
-                        if (ModMain.Chat != null)
-                        {
-                            _ = ModMain.Chat.SendMessage("spawn", "Компаньон появился рядом с игроком");
-                        }
-                    }
+                    Output(_senderInfo, $"Created entity is not EntityAlive: {entityType}");
+                    return;
                 }
-                else
+
+                CompanionManager.RegisterCompanion(companion, player, gender);
+                Output(_senderInfo, $"Companion spawned! Type: {entityType}, ID: {entity.entityId}");
+
+                if (ModMain.Chat != null)
                 {
-                    Output(_senderInfo, "Failed to spawn companion");
+                    _ = ModMain.Chat.SendMessage("spawn", "Компаньон появился рядом с игроком");
                 }
             }
             catch (Exception ex)

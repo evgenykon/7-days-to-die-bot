@@ -134,7 +134,9 @@ namespace CompanionBot
         {
             try
             {
-                SdtdConsole.Instance.Output($"[Companion] {message}");
+                var recipients = new System.Collections.Generic.List<int>();
+                string colored = $"[FFFFFF][Companion][-] [FFAAAA]{message}[-]";
+                GameManager.Instance?.ChatMessageClient(EChatType.Global, -1, colored, recipients, EMessageSender.Server, GeneratedTextManager.BbCodeSupportMode.Supported);
                 Log.Out($"[CompanionBot] Chat: {message}");
             }
             catch (Exception ex)

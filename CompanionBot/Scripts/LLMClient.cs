@@ -12,17 +12,19 @@ namespace CompanionBot
         private readonly HttpClient _httpClient;
         private readonly string _endpoint;
         private readonly string _model;
+        private readonly string _embeddingModel;
         private readonly float _temperature;
         private readonly int _maxTokens;
 
         private DateTime _lastRequestTime = DateTime.MinValue;
         private readonly TimeSpan _cooldown;
 
-        public LLMClient(string endpoint, string model, float temperature, int maxTokens, int cooldownSeconds)
+        public LLMClient(string endpoint, string model, string embeddingModel, float temperature, int maxTokens, int cooldownSeconds)
         {
             _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
             _endpoint = endpoint.TrimEnd('/');
             _model = model;
+            _embeddingModel = embeddingModel ?? model;
             _temperature = temperature;
             _maxTokens = maxTokens;
             _cooldown = TimeSpan.FromSeconds(cooldownSeconds);
@@ -85,7 +87,7 @@ namespace CompanionBot
             {
                 var request = new EmbeddingRequest
                 {
-                    Model = _model,
+                    Model = _embeddingModel,
                     Input = text
                 };
 

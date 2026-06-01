@@ -33,34 +33,57 @@ namespace CompanionBot
                 RelevanceScore = 1.0f
             };
 
-            memory.Embedding = await _llmClient.GenerateEmbedding($"{eventType}: {description}");
-
-            if (memory.Embedding != null)
+            try
             {
-                _memories.Add(memory);
-                SaveMemories();
-                Log.Out($"[CompanionBot] Indexed memory: {eventType} - {description}");
+                memory.Embedding = await _llmClient.GenerateEmbedding($"{eventType}: {description}");
             }
+            catch
+            {
+            }
+            _memories.Add(memory);
+            SaveMemories();
+            Log.Out($"[CompanionBot] Indexed memory: {eventType} - {description}");
         }
 
         public async Task<List<string>> RetrieveRelevantMemories(string query, int topK = 3)
         {
             var queryEmbedding = await _llmClient.GenerateEmbedding(query);
-            if (queryEmbedding == null)
-                return new List<string>();
 
-            var scored = _memories
-                .Where(m => m.Embedding != null)
-                .Select(m => new
-                {
-                    Memory = m,
-                    Score = CosineSimilarity(queryEmbedding, m.Embedding) * m.RelevanceScore * GetTimeDecay(m.Timestamp)
-                })
-                .OrderByDescending(x => x.Score)
-                .Take(topK)
-                .ToList();
+            List<MemoryEntry> results;
+            if (queryEmbedding != null)
+            {
+                results = _memories
+                    .Where(m => m.Embedding != null)
+                    .Select(m => new
+                    {
+                        Memory = m,
+                        Score = CosineSimilarity(queryEmbedding, m.Embedding) * m.RelevanceScore * GetTimeDecay(m.Timestamp)
+                    })
+                    .OrderByDescending(x => x.Score)
+                    .Take(topK)
+                    .Select(x => x.Memory)
+                    .ToList();
+            }
+            else
+            {
+                var keywords = query.ToLower().Split(' ', ',', '.', '!', '?')
+                    .Where(w => w.Length > 2)
+                    .ToList();
 
-            return scored.Select(x => $"[{x.Memory.EventType}] {x.Memory.Description}").ToList();
+                results = _memories
+                    .OrderByDescending(m => GetTimeDecay(m.Timestamp))
+                    .Select(m => new
+                    {
+                        Memory = m,
+                        Score = keywords.Count(w => (m.EventType + " " + m.Description).ToLower().Contains(w))
+                    })
+                    .OrderByDescending(x => x.Score)
+                    .Take(topK)
+                    .Select(x => x.Memory)
+                    .ToList();
+            }
+
+            return results.Select(x => $"[{x.EventType}] {x.Description}").ToList();
         }
 
         public void ApplyMemoryDecay()

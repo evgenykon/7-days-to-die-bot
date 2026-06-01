@@ -5,6 +5,28 @@ using UnityEngine;
 
 namespace CompanionBot
 {
+    [HarmonyPatch(typeof(EModelPlayer), "SetSkinTexture")]
+    public class SetSkinTexturePatch
+    {
+        static bool Prefix(string _textureName)
+        {
+            if (string.IsNullOrEmpty(_textureName))
+                return false;
+            return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(EntityPlayer), "OnUpdateEntity")]
+    public class CompanionPlayerUpdatePatch
+    {
+        static bool Prefix(EntityPlayer __instance)
+        {
+            if (CompanionManager.GetCompanion(__instance.entityId) != null)
+                return false;
+            return true;
+        }
+    }
+
     [HarmonyPatch(typeof(GameManager), "Update")]
     public class GameEventTriggerPatch
     {
@@ -17,6 +39,9 @@ namespace CompanionBot
         static void Postfix()
         {
             if (ModMain.Chat == null || ModMain.MemoryLog == null)
+                return;
+
+            if (GameManager.Instance == null || GameManager.Instance.World == null)
                 return;
 
             if (Time.time - _lastCheckTime < 5f)
@@ -33,6 +58,9 @@ namespace CompanionBot
 
         private static void CheckDayNightCycle()
         {
+            if (GameManager.Instance?.World == null)
+                return;
+
             int currentDay = GameUtils.WorldTimeToDays(GameManager.Instance.World.worldTime);
             bool isDay = GameApi.IsDay();
 
@@ -55,6 +83,9 @@ namespace CompanionBot
 
         private static void CheckHordeNight()
         {
+            if (GameManager.Instance?.World == null)
+                return;
+
             int dayNumber = GameUtils.WorldTimeToDays(GameManager.Instance.World.worldTime);
             bool isBloodMoon = dayNumber % 7 == 0;
             bool isNight = !GameApi.IsDay();
@@ -156,25 +187,4 @@ namespace CompanionBot
         }
     }
 
-    [HarmonyPatch(typeof(EntityPlayer), "OnPlayerChat")]
-    public class PlayerChatTriggerPatch
-    {
-        static void Postfix(EntityPlayer __instance, string _message, ref bool _result)
-        {
-            if (__instance == null || string.IsNullOrEmpty(_message))
-                return;
-
-            if (_message.StartsWith("@companion") || _message.StartsWith("/companion"))
-            {
-                string userMessage = _message.Substring(_message.IndexOf(' ') + 1);
-
-                if (ModMain.Chat != null)
-                {
-                    _ = ModMain.Chat.SendMessage("player_dialogue", userMessage);
-                }
-
-                _result = true;
-            }
-        }
-    }
 }

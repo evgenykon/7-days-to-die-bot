@@ -167,3 +167,36 @@ Companion communicates with player via local LLM (LM Studio). Supportive, respec
 - [x] Vehicle interaction (ride along, drive)
 - [x] Animal companion variant (dog, wolf)
 - [x] Drone companion variant (flying, ranged support)
+
+## CURRENT BLOCKER: EntityPlayer Movement (v1.0 stable)
+
+EntityPlayer (SDCS) refuses to move via any standard method. Symptoms:
+- `entity.Move()` — no position change
+- `entity.SetPosition()` — position snaps back to spawn
+- `entity.moveHelper.SetMoveTo()` — no position change
+- Setting `entity.motion` + `entity.speedForward` directly — not yet verified
+
+EntityPlayer uses SDCS (AvatarSDCSController) which requires animator root motion to drive movement. Since `EntityPlayer.OnUpdateEntity` is skipped for companions, the animator parameters (`speedForward`, `speedStrafe`) are never updated by the game.
+
+**Failed attempts:**
+1. Vanilla `Move()` — position frozen, no change per tick
+2. Direct `SetPosition()` + `serverPos` update — position snaps back each frame
+3. `EntityMoveHelper.SetMoveTo()` + `SetFocusPos()` — same as Move(), frozen
+
+**Current approach (not yet tested):**
+- Directly set `entity.motion`, `entity.speedForward`, `entity.moveDirection` in GameApi.MoveTo
+- Let SDCS avatarController.Update() (called from unskipped OnUpdateLive) pick up speedForward → trigger walk anim → root motion moves entity
+
+**Other issues fixed this session:**
+- Chat messages now use `GameManager.ChatMessageClient()` instead of `SdtdConsole.Output()` (messages appear on-screen)
+- `TeleportToOwner` uses `SetPosition()` + `serverPos` instead of raw field assignment
+
+**LLM model:** `nvidia/nemotron-3-nano-4b` (changed from default)
+
+**Key files:**
+- `CompanionBot/Scripts/GameApi.cs` — MoveTo + StopMoving implementations
+- `CompanionBot/Scripts/CompanionBot.cs` — AI tick, UpdateFollowState, TeleportToOwner
+- `CompanionBot/Scripts/ChatSystem.cs` — SendToGameChat using ChatMessageClient
+- `CompanionBot/Scripts/LLMTriggers.cs` — Harmony patches (skip OnUpdateEntity for companions)
+- `CompanionBot/Config/entityclasses.xml` — EntityPlayer + SDCS definition
+- `CompanionBot/Config/llm_config.json` — model override

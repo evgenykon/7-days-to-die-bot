@@ -11,8 +11,26 @@ namespace CompanionBot
         public static void MoveTo(EntityAlive entity, Vector3 targetPosition, float speed = DefaultMoveSpeed)
         {
             if (entity == null) return;
+            float distance = Vector3.Distance(entity.position, targetPosition);
+            if (distance < 0.5f) return;
+
             Vector3 direction = (targetPosition - entity.position).normalized;
-            entity.Move(direction * speed, false, 0f, 0f);
+            Vector3 motion = direction * speed;
+            motion.y = -9.8f * 0.02f;
+
+            entity.motion = motion;
+            entity.speedForward = speed;
+            entity.moveDirection = direction;
+            entity.Move(motion, false, 0f, 0f);
+        }
+
+        public static void StopMoving(EntityAlive entity)
+        {
+            if (entity == null) return;
+            entity.motion = Vector3.zero;
+            entity.speedForward = 0f;
+            entity.speedStrafe = 0f;
+            entity.moveDirection = Vector3.zero;
         }
 
         public static void LookAt(EntityAlive entity, Vector3 targetPosition)
@@ -24,6 +42,13 @@ namespace CompanionBot
                 float angle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
                 entity.transform.rotation = Quaternion.Euler(0, angle, 0);
             }
+        }
+
+        public static void StopMoving(EntityAlive entity)
+        {
+            if (entity == null) return;
+            if (entity is EntityPlayer player && player.moveHelper != null)
+                player.moveHelper.StopMove();
         }
 
         public static void SetTarget(EntityAlive entity, EntityAlive target)
@@ -58,46 +83,43 @@ namespace CompanionBot
 
             try
             {
-                System.Reflection.Assembly assembly = typeof(EntityFactory).Assembly;
-                System.Type entityClassType = assembly.GetType("EntityClass");
-                
-                if (entityClassType != null)
+                int entityClassId = EntityClass.FromString(className);
+                if (entityClassId < 0)
                 {
-                    // Try GetId method first - this should return the correct ID
-                    System.Reflection.MethodInfo getIdMethod = entityClassType.GetMethod("GetId", 
-                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                    
-                    if (getIdMethod != null)
-                    {
-                        int id = (int)getIdMethod.Invoke(null, new object[] { className });
-                        if (id >= 0)
-                        {
-                            Log.Out($"[CompanionBot] Found entity class ID: {id} for {className}");
-                            return EntityFactory.CreateEntity(id, position);
-                        }
-                    }
-
-                    // Fallback: try FromString method
-                    System.Reflection.MethodInfo fromStringMethod = entityClassType.GetMethod("FromString", 
-                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                    
-                    if (fromStringMethod != null)
-                    {
-                        int id = (int)fromStringMethod.Invoke(null, new object[] { className });
-                        if (id >= 0)
-                        {
-                            Log.Out($"[CompanionBot] Found entity class ID (FromString): {id} for {className}");
-                            return EntityFactory.CreateEntity(id, position);
-                        }
-                    }
+                    Log.Error($"[CompanionBot] Entity class not found: {className}");
+                    return null;
                 }
 
-                Log.Error($"[CompanionBot] Could not find entity class: {className}");
-                return null;
+                Log.Out($"[CompanionBot] Found entity class ID: {entityClassId} for {className}");
+
+                var ecd = new EntityCreationData();
+                ecd.entityClass = entityClassId;
+                ecd.id = EntityFactory.nextEntityID++;
+                ecd.pos = position;
+                ecd.rot = Vector3.zero;
+                ecd.spawnById = -1;
+                ecd.spawnByName = null;
+                ecd.skinTexture = "";
+                ecd.playerProfile = new PlayerProfile
+                {
+                    isMale = className.Contains("male") || !className.Contains("female"),
+                    archetype = "random"
+                };
+
+                Entity entity = EntityFactory.CreateEntity(ecd);
+                if (entity == null)
+                {
+                    Log.Error($"[CompanionBot] EntityFactory.CreateEntity returned null for {className}");
+                    return null;
+                }
+
+                GameManager.Instance.World.SpawnEntityInWorld(entity);
+                Log.Out($"[CompanionBot] Entity spawned in world: ID={ecd.id}, classId={entityClassId}");
+                return entity;
             }
             catch (Exception ex)
             {
-                Log.Error($"[CompanionBot] Failed to create entity {className}: {ex.Message}");
+                Log.Error($"[CompanionBot] Failed to create entity {className}: {ex.Message}\n{ex.StackTrace}");
                 return null;
             }
         }

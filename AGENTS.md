@@ -271,3 +271,39 @@ Affects system prompt and speech patterns.
 - Celebrating successes
 - Contextual humor (appropriate, not offensive)
 - Build relationship over time (remember player preferences)
+
+## Session Notes — 2026-06-01/02
+
+### Goal
+Get CompanionBot spawning a visible, moving companion in 7 Days to Die v1.0 stable.
+
+### Progress
+- Entity class: `EntityPlayer` with `ModelType=SDCS`, `AvatarController=AvatarSDCSController`
+- Entity spawns, AI ticks, chat works, no NRE spam — but position stays frozen
+- `entity.Move()`, `SetPosition()`, `moveHelper.SetMoveTo()` all fail to move EntityPlayer
+- Root cause: EntityPlayer SDCS ignores motion/moveHelper; needs animator root motion
+
+### What was changed
+- `GameApi.cs`: MoveTo now sets `entity.motion`, `entity.speedForward`, `entity.moveDirection`
+- `GameApi.cs`: Added `StopMoving()` — zeros out motion/speed
+- `CompanionBot.cs`: `UpdateFollowState` calls `StopMoving()` when companion is within 3m
+- `CompanionBot.cs`: `TeleportToOwner` uses `SetPosition()` + `serverPos` reflection set
+- `ChatSystem.cs`: `SendToGameChat` now uses `GameManager.Instance.ChatMessageClient()` (on-screen)
+- `LLMTriggers.cs`: Patches `EntityPlayer.OnUpdateEntity` → skip for companions (NRE fix)
+- `entityclasses.xml`: Jump to ground fix (raycast + GetHeightAt fallback)
+- `llm_config.json`: model → `nvidia/nemotron-3-nano-4b`
+
+### Active Harmony patches
+| Target | Type | Reason |
+|--------|------|--------|
+| `EModelPlayer.SetSkinTexture` | Prefix (skip if null) | Prevents NRE on spawn |
+| `EntityPlayer.OnUpdateEntity` | Prefix (return false for companions) | Prevents NRE from PlayerEntityStats |
+| `GameManager.Update` | Postfix → `CompanionTickSystem.Tick()` | Main AI loop |
+| `EntityAlive.DamageEntity` | Postfix | Damage tracking |
+| `EntityAlive.OnEntityDeath` | Postfix | Cleanup + LLM trigger |
+
+### Unknowns / Next
+- `speedForward` + `motion` approach not yet tested. If it fails, next options:
+  - Use a different entity type (zombie/animal with friendly faction)
+  - Manually animate root motion on the SDCS animator
+  - Add EntityMoveHelper to EntityPlayer

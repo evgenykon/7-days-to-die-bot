@@ -48,6 +48,7 @@ namespace CompanionBot
                 LLM = new LLMClient(
                     config.Endpoint,
                     config.Model,
+                    config.EmbeddingModel,
                     config.Temperature,
                     config.MaxTokens,
                     config.RateLimit.CooldownSeconds
@@ -80,6 +81,9 @@ namespace CompanionBot
 
             [JsonProperty("model")]
             public string Model { get; set; }
+
+            [JsonProperty("embedding_model")]
+            public string EmbeddingModel { get; set; }
 
             [JsonProperty("temperature")]
             public float Temperature { get; set; }
@@ -136,15 +140,21 @@ namespace CompanionBot
                 return;
             _lastTick = Time.time;
 
+            if (GameManager.Instance?.World == null)
+                return;
+
             var companions = CompanionManager.GetAllCompanions();
+            Log.Out($"[CompanionBot] CompanionTickSystem: {companions.Count} companions");
             foreach (var companionData in companions)
             {
                 if (companionData.Entity == null || companionData.Entity.IsDead())
                 {
+                    Log.Out($"[CompanionBot] CompanionTickSystem: removing dead/null companion");
                     CompanionManager.UnregisterCompanion(companionData.Entity?.entityId ?? -1);
                     continue;
                 }
 
+                Log.Out($"[CompanionBot] CompanionTickSystem: updating companion {companionData.Entity.entityId}, state={companionData.State}, pos={companionData.Entity.position}");
                 CompanionAI.Update(companionData);
 
                 var owner = companionData.Owner;
@@ -255,7 +265,7 @@ namespace CompanionBot
     {
         private const float FollowDistance = 3f;
         private const float MaxFollowDistance = 15f;
-        private const float AttackRange = 25f;
+        private const float AttackRange = 3f;
         private const float UpdateInterval = 0.5f;
         private const float GuardReturnDistance = 5f;
 
@@ -374,14 +384,22 @@ namespace CompanionBot
         private static void UpdateFollowState(EntityAlive companion, EntityPlayer owner)
         {
             float distanceToOwner = Vector3.Distance(companion.position, owner.position);
+            Log.Out($"[CompanionBot] UpdateFollowState: distance={distanceToOwner}, followDist={FollowDistance}, maxDist={MaxFollowDistance}");
 
             if (distanceToOwner > MaxFollowDistance)
             {
+                Log.Out($"[CompanionBot] Teleporting companion to owner");
                 TeleportToOwner(companion, owner);
             }
             else if (distanceToOwner > FollowDistance)
             {
+                Log.Out($"[CompanionBot] Moving companion toward owner");
                 GameApi.MoveTo(companion, owner.position);
+                GameApi.LookAt(companion, owner.position);
+            }
+            else
+            {
+                GameApi.StopMoving(companion);
                 GameApi.LookAt(companion, owner.position);
             }
         }
@@ -495,8 +513,12 @@ namespace CompanionBot
         private static void TeleportToOwner(EntityAlive companion, EntityPlayer owner)
         {
             Vector3 teleportPos = owner.position + new Vector3(2, 0, 2);
-            companion.position = teleportPos;
-            companion.transform.position = teleportPos;
+            companion.SetPosition(teleportPos);
+            if (companion is EntityPlayer)
+            {
+                var serverPos = new Vector3i((int)(teleportPos.x * 100), (int)(teleportPos.y * 100), (int)(teleportPos.z * 100));
+                typeof(Entity).GetField("serverPos", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.SetValue(companion, serverPos);
+            }
             Log.Out($"[CompanionBot] Teleported companion to owner");
         }
     }

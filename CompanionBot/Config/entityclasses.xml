@@ -3,16 +3,17 @@
 	<append xpath="/entity_classes">
 
 <entity_class name="companionBot">
-	<property name="Class" value="EntitySurvivor"/>
+	<property name="Class" value="EntityPlayer"/>
 	<property name="UserSpawnType" value="Console"/>
 	<property name="Tags" value="entity,npc,human,companion"/>
 	<property name="EntityType" value="Player"/>
 	<property name="Faction" value="whiteriver"/>
 	<property name="Gender" value="male"/>
-	<property name="AvatarController" value="AvatarNpcController"/>
-	<property name="ModelType" value="Npc"/>
+	<property name="AvatarController" value="AvatarSDCSController"/>
+	<property name="ModelType" value="SDCS"/>
+	<property name="PhysicsBody" value="PlayerSDCS"/>
+	<property name="Prefab" value="Player"/>
 	<property name="HasRagdoll" value="true"/>
-	<property name="Prefab" value="NPC"/>
 	<property name="Parent" value="Players"/>
 	<property name="PhysicsBody" value="Player"/>
 	<property name="Weight" value="70"/>
