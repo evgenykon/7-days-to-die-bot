@@ -237,41 +237,6 @@ namespace CompanionBot
         }
     }
 
-    [HarmonyPatch(typeof(GameManager), "SaveWorld")]
-    public class SaveWorldPatch
-    {
-        static void Prefix()
-        {
-            try
-            {
-                SaveSystem.SaveCompanions();
-                Log.Out("[CompanionBot] World save - companions saved");
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"[CompanionBot] Failed to save companions on world save: {ex.Message}");
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(GameManager), "LoadWorld")]
-    public class LoadWorldPatch
-    {
-        static void Postfix()
-        {
-            try
-            {
-                CompanionManager.Cleanup();
-                SaveSystem.LoadCompanions();
-                Log.Out("[CompanionBot] World load - companions restored");
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"[CompanionBot] Failed to load companions on world load: {ex.Message}");
-            }
-        }
-    }
-
     public static class CompanionAI
     {
         private const float FollowDistance = 3f;

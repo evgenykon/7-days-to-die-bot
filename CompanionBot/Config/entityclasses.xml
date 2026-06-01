@@ -9,7 +9,6 @@
 	<property name="EntityType" value="Player"/>
 	<property name="Faction" value="whiteriver"/>
 	<property name="Gender" value="male"/>
-	<property name="Mesh" value="Player/Male/player_maleRagdoll"/>
 	<property name="AvatarController" value="AvatarNpcController"/>
 	<property name="ModelType" value="Npc"/>
 	<property name="HasRagdoll" value="true"/>
