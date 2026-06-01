@@ -1,70 +1,128 @@
 # CompanionBot - AI Companion for 7 Days to Die
 
-Мод добавляет AI-компаньона, который следует за игроком и защищает его от зомби и враждебных животных.
+Мод добавляет AI-компаньона, который следует за игроком, защищает его от зомби и общается через локальную LLM (LM Studio) с поддержкой RAG.
 
-## Требования
+## Быстрый старт (полная установка)
 
-- 7 Days to Die 1.0 (stable)
-- .NET Framework 4.8 SDK
-- Отключённый EAC (Easy Anti-Cheat)
+### Шаг 1: Установка LM Studio (для LLM-коммуникации)
 
-## Настройка пути до игры
+1. Скачайте и установите LM Studio: https://lmstudio.ai/
+2. Запустите LM Studio
+3. Скачайте модель для чата (например, `llama-3.2-3b-instruct` или `qwen2.5-3b-instruct`)
+4. Скачайте модель для embeddings: `nomic-embed-text-v1.5`
+5. Перейдите во вкладку "Local Server" и запустите сервер (по умолчанию `http://localhost:1234`)
 
-Путь до игры задаётся в файле `Directory.Build.props` в корне репозитория (`ai-7d2d/`).
+### Шаг 2: Настройка пути до игры
 
-1. Скопируйте шаблон:
-   ```
+1. Скопируйте шаблон конфига:
+   ```powershell
    copy Directory.Build.props.example Directory.Build.props
    ```
 
-2. Откройте `Directory.Build.props` и укажите свой путь:
+2. Откройте `Directory.Build.props` и укажите путь к игре:
    ```xml
-   <GamePath>D:\Games\7 Days To Die</GamePath>
+   <GamePath>D:\SteamLibrary\steamapps\common\7 Days To Die</GamePath>
    ```
 
-Файл `Directory.Build.props` добавлен в `.gitignore` и не коммитится — каждый разработчик указывает свой путь.
+### Шаг 3: Сборка мода
 
-## Установка
+Откройте PowerShell в корне репозитория и выполните:
 
-### Автоматическая установка (рекомендуется)
+```powershell
+dotnet build CompanionBot/CompanionBot.csproj -c Release
+```
 
-1. Запустите `install.bat` — скрипт скопирует все файлы мода в директорию игры
+Или запустите `CompanionBot\build.bat` (сборка + установка).
 
-### Ручная установка
+### Шаг 4: Установка мода в игру
 
-1. Соберите проект:
-   ```
-   dotnet build CompanionBot.csproj -c Release
-   ```
+Запустите скрипт установки:
 
-2. Скопируйте файлы в `%GAME_PATH%\Mods\CompanionBot\`:
-   - `ModInfo.xml`
-   - `Config\` (вся директория)
-   - `bin\Release\net48\CompanionBot.dll`
+```powershell
+CompanionBot\install.bat
+```
 
-3. Создайте директорию `Data\` для RAG памяти:
-   ```
-   mkdir "%GAME_PATH%\Mods\CompanionBot\Data"
-   ```
+Скрипт автоматически:
+- Создаст директорию `Mods/CompanionBot/` в папке игры
+- Скопирует `ModInfo.xml`, `Config/`, DLL
+- Создаст директорию `Data/` для RAG памяти
 
-### Отключение EAC
+### Шаг 5: Настройка LLM
 
-Мод требует отключения Easy Anti-Cheat:
+Отредактируйте `CompanionBot/Config/llm_config.json`:
 
-**Вариант 1:** В лаунчере Steam выберите "7 Days to Die - No EAC"
+```json
+{
+  "endpoint": "http://localhost:1234/v1",
+  "model": "llama-3.2-3b-instruct",
+  "temperature": 0.7,
+  "max_tokens": 150,
+  "personality": {
+    "tone": "supportive, respectful, encouraging",
+    "verbosity": "normal",
+    "humor": "contextual"
+  },
+  "rate_limit": {
+    "messages_per_minute": 3,
+    "cooldown_seconds": 20
+  }
+}
+```
+
+### Шаг 6: Отключение EAC (Easy Anti-Cheat)
+
+Мод требует отключения античита. Выберите один из вариантов:
+
+**Вариант 1:** В Steam выберите "7 Days to Die - No EAC" при запуске
 
 **Вариант 2:** Добавьте параметр запуска в Steam:
 ```
 -EACLaunchMode=0
 ```
 
-**Вариант 3:** Запустите игру напрямую через `7DaysToDie.exe` (не через лаунчер)
+**Вариант 3:** Запустите `7DaysToDie.exe` напрямую (не через лаунчер)
 
-### Запуск игры
+### Шаг 7: Запуск игры и спавн компаньона
 
-1. Запустите игру
-2. Откройте консоль (F1)
-3. Введите команду спавна компаньона
+1. Запустите игру (без EAC)
+2. Загрузите или создайте мир
+3. Откройте консоль (F1)
+4. Введите команду спавна:
+   ```
+   cb spawn
+   ```
+
+Компаньон появится рядом с вами и начнёт общаться через LLM!
+
+## Требования
+
+- 7 Days to Die 1.0 (stable)
+- .NET SDK 8.0+ (для сборки)
+- LM Studio с запущенным локальным сервером (для LLM-фичи)
+- Отключённый EAC
+
+## Ручная установка (альтернатива install.bat)
+
+Если скрипт не работает, установите вручную:
+
+1. Соберите проект:
+   ```powershell
+   dotnet build CompanionBot/CompanionBot.csproj -c Release
+   ```
+
+2. Создайте директорию мода:
+   ```powershell
+   mkdir "%GAME_PATH%\Mods\CompanionBot"
+   mkdir "%GAME_PATH%\Mods\CompanionBot\Config"
+   mkdir "%GAME_PATH%\Mods\CompanionBot\Data"
+   ```
+
+3. Скопируйте файлы:
+   ```powershell
+   copy CompanionBot\ModInfo.xml "%GAME_PATH%\Mods\CompanionBot\"
+   copy CompanionBot\Config\* "%GAME_PATH%\Mods\CompanionBot\Config\"
+   copy CompanionBot\bin\Release\net48\CompanionBot.dll "%GAME_PATH%\Mods\CompanionBot\"
+   ```
 
 ## Использование
 
