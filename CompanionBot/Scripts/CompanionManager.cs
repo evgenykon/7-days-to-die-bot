@@ -49,6 +49,7 @@ namespace CompanionBot
             if (_companions.ContainsKey(entityId))
             {
                 _companions.Remove(entityId);
+                CombatSystem.CleanupStats(entityId);
                 Log.Out($"[CompanionBot] Unregistered companion: {entityId}");
             }
         }

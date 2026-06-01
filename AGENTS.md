@@ -35,7 +35,8 @@ ai-7d2d/
     ├── Scripts/
     │   ├── CompanionBot.cs        # Harmony patches + main mod entry
     │   ├── CompanionManager.cs    # Companion state management (Follow/Stay/Guard)
-    │   ├── ConsoleCommands.cs     # Console commands (cb spawn/follow/stay/guard/dismiss/status)
+    │   ├── ConsoleCommands.cs     # Console commands (cb spawn/follow/stay/guard/dismiss/status/heal/equip/stats)
+    │   ├── CombatSystem.cs        # Combat AI (target priority, retreat, line-of-fire checks, statistics)
     │   ├── SaveSystem.cs          # Save/load companions across game sessions
     │   ├── LLMClient.cs           # HTTP client for LM Studio API
     │   ├── ChatSystem.cs          # Context-aware messaging

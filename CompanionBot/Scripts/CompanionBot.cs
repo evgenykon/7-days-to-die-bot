@@ -174,6 +174,7 @@ namespace CompanionBot
             }
             else if (CompanionManager.GetCompanion(_attackingEntity.entityId) != null)
             {
+                CombatSystem.RecordKill(_attackingEntity.entityId, __instance);
                 ModMain.MemoryLog?.LogKill(_attackingEntity, __instance);
                 _ = ModMain.Chat?.SendMessage("companion_kill", $"Компаньон убил {__instance.EntityName}");
             }
@@ -244,6 +245,8 @@ namespace CompanionBot
 
             int entityId = companion.entityId;
 
+            CombatSystem.InitializeStats(entityId);
+
             if (!lastUpdateTime.ContainsKey(entityId))
             {
                 lastUpdateTime[entityId] = 0f;
@@ -254,12 +257,39 @@ namespace CompanionBot
 
             lastUpdateTime[entityId] = Time.time;
 
-            EntityAlive target = FindNearestEnemy(companion, owner);
+            List<EntityAlive> enemies = FindAllEnemies(companion, owner);
+            EntityAlive target = CombatSystem.FindBestTarget(companion, owner, enemies);
+
+            if (CombatSystem.ShouldRetreat(companion) && target != null)
+            {
+                if (!CombatSystem.IsRetreating(entityId))
+                {
+                    CombatSystem.StartRetreat(entityId);
+                    Log.Out($"[CompanionBot] Companion {entityId} retreating (low HP)");
+                }
+
+                Vector3 retreatPos = CombatSystem.CalculateRetreatPosition(companion, owner, target);
+                MoveTowards(companion, retreatPos);
+                companion.SetAttackTarget(null);
+                return;
+            }
 
             if (target != null && Vector3.Distance(companion.position, target.position) <= AttackRange)
             {
-                companion.SetAttackTarget(target);
-                return;
+                if (CombatSystem.IsLineOfFireClear(companion, target, owner))
+                {
+                    companion.SetAttackTarget(target);
+                    return;
+                }
+                else
+                {
+                    CombatSystem.RecordFriendlyFireAvoided(entityId);
+                    Vector3 repositionDir = Vector3.Cross((target.position - companion.position).normalized, Vector3.up);
+                    Vector3 repositionPos = companion.position + repositionDir * 3f;
+                    MoveTowards(companion, repositionPos);
+                    companion.SetAttackTarget(null);
+                    return;
+                }
             }
 
             companion.SetAttackTarget(null);
@@ -307,13 +337,12 @@ namespace CompanionBot
             }
         }
 
-        private static EntityAlive FindNearestEnemy(EntityAlive companion, EntityPlayer owner)
+        private static List<EntityAlive> FindAllEnemies(EntityAlive companion, EntityPlayer owner)
         {
-            EntityAlive nearestEnemy = null;
-            float nearestDistance = AttackRange;
+            var enemies = new List<EntityAlive>();
 
             if (GameManager.Instance?.World?.Entities?.list == null)
-                return null;
+                return enemies;
 
             List<EntityAlive> entities = GameManager.Instance.World.Entities.list;
             foreach (EntityAlive entity in entities)
@@ -337,14 +366,13 @@ namespace CompanionBot
                     continue;
 
                 float distance = Vector3.Distance(companion.position, entity.position);
-                if (distance < nearestDistance)
+                if (distance <= AttackRange)
                 {
-                    nearestDistance = distance;
-                    nearestEnemy = entity;
+                    enemies.Add(entity);
                 }
             }
 
-            return nearestEnemy;
+            return enemies;
         }
 
         private static void MoveTowards(EntityAlive companion, Vector3 targetPosition)

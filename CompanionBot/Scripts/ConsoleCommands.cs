@@ -24,7 +24,10 @@ namespace CompanionBot
   cb stay             - Companion stays at current position
   cb guard [radius]   - Companion guards current area (default radius: 10m)
   cb dismiss          - Remove companion
-  cb status           - Show companion status";
+  cb status           - Show companion status
+  cb heal             - Use first aid kit on companion
+  cb equip <item>     - Give weapon/item to companion
+  cb stats            - Show combat statistics";
         }
 
         public override void Execute(List<string> _params, CommandSenderInfo _senderInfo)
@@ -63,6 +66,15 @@ namespace CompanionBot
                     break;
                 case "status":
                     HandleStatus(_senderInfo, player);
+                    break;
+                case "heal":
+                    HandleHeal(_senderInfo, player);
+                    break;
+                case "equip":
+                    HandleEquip(_params, _senderInfo, player);
+                    break;
+                case "stats":
+                    HandleStats(_senderInfo, player);
                     break;
                 default:
                     Output(_senderInfo, $"Unknown command: {command}");
@@ -258,6 +270,153 @@ namespace CompanionBot
                 Output(_senderInfo, $"Guard position: {companion.GuardPosition}");
                 Output(_senderInfo, $"Guard radius: {companion.GuardRadius}m");
             }
+
+            var stats = CombatSystem.GetStats(companion.Entity.entityId);
+            if (stats != null)
+            {
+                Output(_senderInfo, $"Kills: {stats.TotalKills}");
+            }
+        }
+
+        private void HandleHeal(CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, "No active companion found");
+                return;
+            }
+
+            var entity = companion.Entity;
+            if (entity.Health >= entity.GetMaxHealth())
+            {
+                Output(_senderInfo, "Companion is already at full health");
+                return;
+            }
+
+            var inventory = player.inventory;
+            if (inventory == null)
+            {
+                Output(_senderInfo, "Cannot access player inventory");
+                return;
+            }
+
+            string[] healingItems = { "medicalFirstAidKit", "medicalBandage", "medicalFirstAidBandage", "medicalPlasterCast", "medicalBloodDrawKit" };
+            string foundItem = null;
+
+            foreach (var itemName in healingItems)
+            {
+                if (inventory.GetItemCount(itemName) > 0)
+                {
+                    foundItem = itemName;
+                    break;
+                }
+            }
+
+            if (foundItem == null)
+            {
+                Output(_senderInfo, "No healing items found in inventory (need: first aid kit, bandage, etc.)");
+                return;
+            }
+
+            try
+            {
+                inventory.DecItem(itemName: foundItem, count: 1);
+
+                int healAmount = foundItem == "medicalFirstAidKit" ? 100 : 50;
+                entity.Health = Math.Min(entity.Health + healAmount, entity.GetMaxHealth());
+
+                Output(_senderInfo, $"Healed companion for {healAmount} HP using {foundItem}");
+                Output(_senderInfo, $"Companion health: {entity.Health}/{entity.GetMaxHealth()}");
+
+                if (ModMain.Chat != null)
+                {
+                    _ = ModMain.Chat.SendMessage("heal", "Игрок вылечил компаньона");
+                }
+            }
+            catch (Exception ex)
+            {
+                Output(_senderInfo, $"Error healing companion: {ex.Message}");
+                Log.Error($"[CompanionBot] Heal error: {ex.Message}");
+            }
+        }
+
+        private void HandleEquip(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, "No active companion found");
+                return;
+            }
+
+            if (_params.Count < 2)
+            {
+                Output(_senderInfo, "Usage: cb equip <item_name>");
+                Output(_senderInfo, "Example: cb equip gunRifleT1AK47");
+                return;
+            }
+
+            string itemName = _params[1];
+            var inventory = player.inventory;
+
+            if (inventory == null)
+            {
+                Output(_senderInfo, "Cannot access player inventory");
+                return;
+            }
+
+            if (inventory.GetItemCount(itemName) <= 0)
+            {
+                Output(_senderInfo, $"Item '{itemName}' not found in inventory");
+                return;
+            }
+
+            try
+            {
+                inventory.DecItem(itemName: itemName, count: 1);
+
+                var entity = companion.Entity;
+                entity.inventory.SetItem(0, new ItemStack(ItemClass.GetItem(itemName), 1));
+
+                Output(_senderInfo, $"Equipped companion with {itemName}");
+
+                if (ModMain.Chat != null)
+                {
+                    _ = ModMain.Chat.SendMessage("equip", $"Игрок дал компаньону {itemName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Output(_senderInfo, $"Error equipping companion: {ex.Message}");
+                Log.Error($"[CompanionBot] Equip error: {ex.Message}");
+            }
+        }
+
+        private void HandleStats(CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, "No active companion found");
+                return;
+            }
+
+            var stats = CombatSystem.GetStats(companion.Entity.entityId);
+            if (stats == null)
+            {
+                Output(_senderInfo, "No combat statistics available");
+                return;
+            }
+
+            Output(_senderInfo, "=== Combat Statistics ===");
+            Output(_senderInfo, $"Total Kills: {stats.TotalKills}");
+            Output(_senderInfo, $"Zombie Kills: {stats.ZombieKills}");
+            Output(_senderInfo, $"Animal Kills: {stats.AnimalKills}");
+            Output(_senderInfo, $"Damage Dealt: {stats.TotalDamageDealt:F0}");
+            Output(_senderInfo, $"Damage Taken: {stats.TotalDamageTaken:F0}");
+            Output(_senderInfo, $"Retreats: {stats.RetreatCount}");
+            Output(_senderInfo, $"Friendly Fire Avoided: {stats.FriendlyFireAvoided}");
         }
 
         private EntityPlayer GetPlayer(CommandSenderInfo _senderInfo)

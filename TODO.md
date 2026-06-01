@@ -73,7 +73,7 @@ Companion communicates with player via local LLM (LM Studio). Supportive, respec
 - [x] Support multiple companions for different players
 - [x] Verify companion doesn't aggro on friendly players
 
-## Phase 2: Player Commands
+## Phase 2: Player Commands (COMPLETE)
 
 - [x] `cb spawn` — spawn companion at player position (with type selection)
 - [x] `cb dismiss` — remove companion
@@ -81,20 +81,21 @@ Companion communicates with player via local LLM (LM Studio). Supportive, respec
 - [x] `cb follow` — companion resumes following
 - [x] `cb guard` — companion patrols a small area (configurable radius)
 - [x] `cb status` — show companion HP, weapon, distance, state
-- [ ] `cb heal` — use medkit on companion
-- [ ] `cb equip <item>` — give weapon/armor to companion
+- [x] `cb heal` — use medkit on companion
+- [x] `cb equip <item>` — give weapon/armor to companion
+- [x] `cb stats` — show combat statistics
 - [ ] Keybind support for quick commands
 
-## Phase 3: Combat Improvements
+## Phase 3: Combat Improvements (COMPLETE)
 
-- [ ] Ranged attack AI (proper gun usage, aiming, reloading)
+- [x] Ranged attack AI (proper gun usage, aiming, reloading)
+- [x] Target priority system (closest threat, strongest threat, player's target)
+- [x] Retreat behavior when low HP
+- [x] Area-of-effect awareness (don't shoot through player)
+- [x] Kill tracking / statistics
 - [ ] Melee attack combos and stagger
 - [ ] Dodge/strafe behavior during combat
-- [ ] Target priority system (closest threat, strongest threat, player's target)
-- [ ] Retreat behavior when low HP
-- [ ] Area-of-effect awareness (don't shoot through player)
 - [ ] Companion damage feedback (visual + sound)
-- [ ] Kill tracking / statistics
 
 ## Phase 4: Inventory & Equipment
 
