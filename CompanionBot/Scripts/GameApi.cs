@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace CompanionBot
@@ -47,6 +49,68 @@ namespace CompanionBot
         {
             if (GameManager.Instance == null) return 0;
             return GameUtils.WorldTimeToDays(GameManager.Instance.World.worldTime);
+        }
+
+        public static Entity CreateEntity(string className, Vector3 position)
+        {
+            if (string.IsNullOrEmpty(className))
+                return null;
+
+            try
+            {
+                // Use reflection to find the correct method to get entity class ID by name
+                var assembly = typeof(EntityFactory).Assembly;
+                
+                // Try to find EntityClassList type
+                var entityClassListType = assembly.GetType("EntityClassList");
+                if (entityClassListType != null)
+                {
+                    // Try to get static instance or field
+                    var instanceField = entityClassListType.GetField("Instance", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
+                    if (instanceField != null)
+                    {
+                        var instance = instanceField.GetValue(null);
+                        if (instance != null)
+                        {
+                            // Try to find GetIdByName or similar method
+                            var getIdMethod = entityClassListType.GetMethod("GetIdByName", new[] { typeof(string) });
+                            if (getIdMethod != null)
+                            {
+                                int id = (int)getIdMethod.Invoke(instance, new object[] { className });
+                                if (id >= 0)
+                                {
+                                    return EntityFactory.CreateEntity(id, position);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Fallback: try to find entity class ID through EntityClass static methods
+                var entityClassType = typeof(EntityClass);
+                var getByNameMethod = entityClassType.GetMethod("GetByName", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] { typeof(string) }, null);
+                if (getByNameMethod != null)
+                {
+                    var entityClass = getByNameMethod.Invoke(null, new object[] { className });
+                    if (entityClass != null)
+                    {
+                        var idProperty = entityClassType.GetProperty("id");
+                        if (idProperty != null)
+                        {
+                            int id = (int)idProperty.GetValue(entityClass);
+                            return EntityFactory.CreateEntity(id, position);
+                        }
+                    }
+                }
+
+                Log.Error($"[CompanionBot] Could not find method to get entity class ID for: {className}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"[CompanionBot] Failed to create entity {className}: {ex.Message}");
+                return null;
+            }
         }
 
         public static string GetEntityName(Entity entity)

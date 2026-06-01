@@ -167,28 +167,6 @@ namespace CompanionBot
         }
     }
 
-    [HarmonyPatch(typeof(EntityAlive), "OnEntityKill")]
-    public class EntityKillPatch
-    {
-        static void Postfix(EntityAlive __instance, EntityAlive _attackingEntity)
-        {
-            if (__instance == null || _attackingEntity == null)
-                return;
-
-            if (_attackingEntity is EntityPlayer)
-            {
-                ModMain.MemoryLog?.LogKill(_attackingEntity, __instance);
-                _ = ModMain.Chat?.SendMessage("player_kill", $"Игрок убил {__instance.EntityName}");
-            }
-            else if (CompanionManager.GetCompanion(_attackingEntity.entityId) != null)
-            {
-                CombatSystem.RecordKill(_attackingEntity.entityId, __instance);
-                ModMain.MemoryLog?.LogKill(_attackingEntity, __instance);
-                _ = ModMain.Chat?.SendMessage("companion_kill", $"Компаньон убил {__instance.EntityName}");
-            }
-        }
-    }
-
     [HarmonyPatch(typeof(EntityAlive), "DamageEntity")]
     public class DamageEntityPatch
     {

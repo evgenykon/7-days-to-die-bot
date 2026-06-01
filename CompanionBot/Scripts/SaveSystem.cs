@@ -145,14 +145,13 @@ namespace CompanionBot
                     return;
                 }
 
-                int entityClassId = EntityClass.FromString(data.EntityType);
-                if (entityClassId < 0)
+                var spawnedEntity = GameApi.CreateEntity(data.EntityType, data.Position);
+                if (spawnedEntity == null)
                 {
-                    Log.Error($"[CompanionBot] Unknown entity class: {data.EntityType}");
+                    Log.Error($"[CompanionBot] Failed to create entity: {data.EntityType}");
                     return;
                 }
-                var spawnedEntity = EntityFactory.CreateEntity(entityClassId, data.Position);
-                int entityId = spawnedEntity != null ? spawnedEntity.entityId : -1;
+                int entityId = spawnedEntity.entityId;
 
                 if (entityId <= 0)
                 {
