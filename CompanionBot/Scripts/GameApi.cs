@@ -63,21 +63,7 @@ namespace CompanionBot
                 
                 if (entityClassType != null)
                 {
-                    // Try FromString method - this is the correct one!
-                    System.Reflection.MethodInfo fromStringMethod = entityClassType.GetMethod("FromString", 
-                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                    
-                    if (fromStringMethod != null)
-                    {
-                        int id = (int)fromStringMethod.Invoke(null, new object[] { className });
-                        if (id >= 0)
-                        {
-                            Log.Out($"[CompanionBot] Found entity class ID: {id} for {className}");
-                            return EntityFactory.CreateEntity(id, position);
-                        }
-                    }
-
-                    // Fallback: try GetId method
+                    // Try GetId method first - this should return the correct ID
                     System.Reflection.MethodInfo getIdMethod = entityClassType.GetMethod("GetId", 
                         System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
                     
@@ -87,6 +73,20 @@ namespace CompanionBot
                         if (id >= 0)
                         {
                             Log.Out($"[CompanionBot] Found entity class ID: {id} for {className}");
+                            return EntityFactory.CreateEntity(id, position);
+                        }
+                    }
+
+                    // Fallback: try FromString method
+                    System.Reflection.MethodInfo fromStringMethod = entityClassType.GetMethod("FromString", 
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    
+                    if (fromStringMethod != null)
+                    {
+                        int id = (int)fromStringMethod.Invoke(null, new object[] { className });
+                        if (id >= 0)
+                        {
+                            Log.Out($"[CompanionBot] Found entity class ID (FromString): {id} for {className}");
                             return EntityFactory.CreateEntity(id, position);
                         }
                     }
