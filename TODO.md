@@ -107,35 +107,35 @@ Companion communicates with player via local LLM (LM Studio). Supportive, respec
 - [x] Loot pickup (optional, configurable)
 - [x] Item durability tracking
 
-## Phase 5: Advanced AI Behaviors
+## Phase 5: Advanced AI Behaviors (COMPLETE)
 
-- [ ] Pathfinding improvements (ladder climbing, door opening)
-- [ ] Patrol mode (configurable waypoints)
-- [ ] Guard mode (defend specific area/block)
-- [ ] Escort mode (stay close, prioritize player safety)
-- [ ] Scout mode (explore ahead, report enemies)
-- [ ] Day/night behavior (rest during day, alert at night)
-- [ ] Horde night behavior (defensive positioning)
-- [ ] Reaction to blood moon (aggressive defense)
+- [x] Pathfinding improvements (ladder climbing, door opening)
+- [x] Patrol mode (configurable waypoints)
+- [x] Guard mode (defend specific area/block)
+- [x] Escort mode (stay close, prioritize player safety)
+- [x] Scout mode (explore ahead, report enemies)
+- [x] Day/night behavior (rest during day, alert at night)
+- [x] Horde night behavior (defensive positioning)
+- [x] Reaction to blood moon (aggressive defense)
 
-## Phase 6: Companion Customization
+## Phase 6: Companion Customization (COMPLETE)
 
-- [ ] Multiple companion archetypes (melee, ranged, medic, engineer)
-- [ ] Custom names
-- [ ] Appearance selection (model, clothing)
-- [ ] Skill tree / leveling system
-- [ ] XP gain from kills
-- [ ] Perk system (faster reload, more HP, better aim)
-- [ ] Companion traits (brave, cautious, aggressive, passive)
+- [x] Multiple companion archetypes (melee, ranged, medic, engineer)
+- [x] Custom names
+- [x] Appearance selection (model, clothing)
+- [x] Skill tree / leveling system
+- [x] XP gain from kills
+- [x] Perk system (faster reload, more HP, better aim)
+- [x] Companion traits (brave, cautious, aggressive, passive)
 
-## Phase 7: UI & HUD
+## Phase 7: UI & HUD (COMPLETE)
 
-- [ ] Companion health bar on HUD
-- [ ] Minimap icon for companion
-- [ ] Companion status panel (HP, ammo, buffs/debuffs)
-- [ ] Radial menu for quick commands
-- [ ] Notification system (companion under attack, low HP, out of ammo)
-- [ ] XUi window integration for inventory management
+- [x] Companion health bar on HUD
+- [x] Minimap icon for companion
+- [x] Companion status panel (HP, ammo, buffs/debuffs)
+- [x] Radial menu for quick commands
+- [x] Notification system (companion under attack, low HP, out of ammo)
+- [x] XUi window integration for inventory management
 
 ## Phase 8: Multi-Companion Support
 

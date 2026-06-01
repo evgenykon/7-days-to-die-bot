@@ -35,10 +35,13 @@ ai-7d2d/
     ├── Scripts/
     │   ├── CompanionBot.cs        # Harmony patches + main mod entry
     │   ├── CompanionManager.cs    # Companion state management (Follow/Stay/Guard)
-    │   ├── ConsoleCommands.cs     # Console commands (cb spawn/follow/stay/guard/dismiss/status/heal/equip/unequip/inventory/autopickup/stats)
+    │   ├── ConsoleCommands.cs     # Console commands (cb spawn/follow/stay/guard/dismiss/status/heal/equip/unequip/inventory/autopickup/stats + Phase 5/6/7 commands)
     │   ├── CombatSystem.cs        # Combat AI (target priority, retreat, line-of-fire checks, melee combos, dodge/strafe, ammo management, damage feedback, statistics)
     │   ├── InventorySystem.cs     # Inventory management (equipment slots, items, ammo, durability, auto-pickup)
     │   ├── SaveSystem.cs          # Save/load companions and inventory across game sessions
+    │   ├── AdvancedAI.cs          # Advanced AI behaviors (patrol, escort, scout, horde defense, day/night cycle)
+    │   ├── CompanionProfile.cs    # Companion customization (name, class, personality, skills, leveling)
+    │   ├── SquadManager.cs        # Squad management (formations, group commands, multi-companion coordination)
     │   ├── LLMClient.cs           # HTTP client for LM Studio API
     │   ├── ChatSystem.cs          # Context-aware messaging
     │   ├── RAGSystem.cs           # Vector store + semantic search

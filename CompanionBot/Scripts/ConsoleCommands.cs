@@ -30,7 +30,30 @@ namespace CompanionBot
   cb unequip <slot>   - Unequip item from slot (weapon/head/chest/legs/feet)
   cb inventory        - Show companion inventory
   cb autopickup [on/off] - Toggle auto loot pickup
-  cb stats            - Show combat statistics";
+  cb stats            - Show combat statistics
+  
+Advanced AI (Phase 5):
+  cb patrol add       - Add current position as patrol waypoint
+  cb patrol clear     - Clear all patrol waypoints
+  cb patrol start     - Start patrol mode
+  cb escort [dist]    - Escort mode with distance (default: 5m)
+  cb scout [radius]   - Scout mode with radius (default: 50m)
+  cb horde            - Set horde defense position
+  
+Customization (Phase 6):
+  cb name <name>      - Set companion name
+  cb class <class>    - Set class (soldier/medic/engineer/scout/guardian)
+  cb personality <trait> - Set personality (aggressive/defensive/balanced/cautious/brave)
+  cb profile          - Show companion profile
+  
+Squad (Phase 7):
+  cb squad add        - Add companion to squad
+  cb squad remove     - Remove companion from squad
+  cb squad formation <type> - Set formation (line/wedge/circle/column/free)
+  cb squad all follow - All squad members follow
+  cb squad all guard  - All squad members guard
+  cb squad all attack - All squad members attack current target
+  cb squad status     - Show squad status";
         }
 
         public override void Execute(List<string> _params, CommandSenderInfo _senderInfo)
@@ -87,6 +110,33 @@ namespace CompanionBot
                     break;
                 case "stats":
                     HandleStats(_senderInfo, player);
+                    break;
+                case "patrol":
+                    HandlePatrol(_params, _senderInfo, player);
+                    break;
+                case "escort":
+                    HandleEscort(_params, _senderInfo, player);
+                    break;
+                case "scout":
+                    HandleScout(_params, _senderInfo, player);
+                    break;
+                case "horde":
+                    HandleHorde(_senderInfo, player);
+                    break;
+                case "name":
+                    HandleName(_params, _senderInfo, player);
+                    break;
+                case "class":
+                    HandleClass(_params, _senderInfo, player);
+                    break;
+                case "personality":
+                    HandlePersonality(_params, _senderInfo, player);
+                    break;
+                case "profile":
+                    HandleProfile(_senderInfo, player);
+                    break;
+                case "squad":
+                    HandleSquad(_params, _senderInfo, player);
                     break;
                 default:
                     Output(_senderInfo, $"Unknown command: {command}");
@@ -605,6 +655,392 @@ namespace CompanionBot
             if (ModMain.Chat != null)
             {
                 _ = ModMain.Chat.SendMessage("autopickup", enable ? "Компаньон будет подбирать лут" : "Компаньон перестал подбирать лут");
+            }
+        }
+
+        // Phase 5: Advanced AI Commands
+        private void HandlePatrol(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, "No active companion found");
+                return;
+            }
+
+            if (_params.Count < 2)
+            {
+                Output(_senderInfo, "Usage: cb patrol [add/clear/start]");
+                return;
+            }
+
+            int entityId = companion.Entity.entityId;
+            string action = _params[1].ToLower();
+
+            switch (action)
+            {
+                case "add":
+                    AdvancedAI.AddPatrolWaypoint(entityId, player.position);
+                    Output(_senderInfo, $"Patrol waypoint added at {player.position}");
+                    break;
+                case "clear":
+                    AdvancedAI.ClearPatrolWaypoints(entityId);
+                    Output(_senderInfo, "Patrol waypoints cleared");
+                    break;
+                case "start":
+                    AdvancedAI.SetMode(entityId, AdvancedBehaviorMode.Patrol);
+                    Output(_senderInfo, "Patrol mode started");
+                    break;
+                default:
+                    Output(_senderInfo, "Unknown patrol action. Use: add, clear, start");
+                    break;
+            }
+        }
+
+        private void HandleEscort(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, "No active companion found");
+                return;
+            }
+
+            float distance = 5f;
+            if (_params.Count > 1 && float.TryParse(_params[1], out float parsedDist))
+            {
+                distance = parsedDist;
+            }
+
+            int entityId = companion.Entity.entityId;
+            AdvancedAI.SetEscortParams(entityId, distance);
+            Output(_senderInfo, $"Escort mode enabled with distance {distance}m");
+        }
+
+        private void HandleScout(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, "No active companion found");
+                return;
+            }
+
+            float radius = 50f;
+            if (_params.Count > 1 && float.TryParse(_params[1], out float parsedRadius))
+            {
+                radius = parsedRadius;
+            }
+
+            int entityId = companion.Entity.entityId;
+            AdvancedAI.SetScoutParams(entityId, player.position, radius);
+            Output(_senderInfo, $"Scout mode enabled with radius {radius}m");
+        }
+
+        private void HandleHorde(CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, "No active companion found");
+                return;
+            }
+
+            int entityId = companion.Entity.entityId;
+            AdvancedAI.SetHordeDefensePosition(entityId, player.position);
+            Output(_senderInfo, $"Horde defense position set at {player.position}");
+        }
+
+        // Phase 6: Customization Commands
+        private void HandleName(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, "No active companion found");
+                return;
+            }
+
+            if (_params.Count < 2)
+            {
+                Output(_senderInfo, "Usage: cb name <name>");
+                return;
+            }
+
+            string name = string.Join(" ", _params.GetRange(1, _params.Count - 1));
+            int entityId = companion.Entity.entityId;
+            ProfileManager.SetName(entityId, name);
+            Output(_senderInfo, $"Companion renamed to '{name}'");
+        }
+
+        private void HandleClass(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, "No active companion found");
+                return;
+            }
+
+            if (_params.Count < 2)
+            {
+                Output(_senderInfo, "Usage: cb class <soldier/medic/engineer/scout/guardian>");
+                return;
+            }
+
+            string className = _params[1].ToLower();
+            CompanionClass companionClass;
+
+            switch (className)
+            {
+                case "soldier":
+                    companionClass = CompanionClass.Soldier;
+                    break;
+                case "medic":
+                    companionClass = CompanionClass.Medic;
+                    break;
+                case "engineer":
+                    companionClass = CompanionClass.Engineer;
+                    break;
+                case "scout":
+                    companionClass = CompanionClass.Scout;
+                    break;
+                case "guardian":
+                    companionClass = CompanionClass.Guardian;
+                    break;
+                default:
+                    Output(_senderInfo, "Unknown class. Use: soldier, medic, engineer, scout, guardian");
+                    return;
+            }
+
+            int entityId = companion.Entity.entityId;
+            ProfileManager.SetClass(entityId, companionClass);
+            Output(_senderInfo, $"Companion class set to {companionClass}");
+        }
+
+        private void HandlePersonality(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, "No active companion found");
+                return;
+            }
+
+            if (_params.Count < 2)
+            {
+                Output(_senderInfo, "Usage: cb personality <aggressive/defensive/balanced/cautious/brave>");
+                return;
+            }
+
+            string traitName = _params[1].ToLower();
+            PersonalityTrait personality;
+
+            switch (traitName)
+            {
+                case "aggressive":
+                    personality = PersonalityTrait.Aggressive;
+                    break;
+                case "defensive":
+                    personality = PersonalityTrait.Defensive;
+                    break;
+                case "balanced":
+                    personality = PersonalityTrait.Balanced;
+                    break;
+                case "cautious":
+                    personality = PersonalityTrait.Cautious;
+                    break;
+                case "brave":
+                    personality = PersonalityTrait.Brave;
+                    break;
+                default:
+                    Output(_senderInfo, "Unknown personality. Use: aggressive, defensive, balanced, cautious, brave");
+                    return;
+            }
+
+            int entityId = companion.Entity.entityId;
+            ProfileManager.SetPersonality(entityId, personality);
+            Output(_senderInfo, $"Companion personality set to {personality}");
+        }
+
+        private void HandleProfile(CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, "No active companion found");
+                return;
+            }
+
+            int entityId = companion.Entity.entityId;
+            var profile = ProfileManager.GetProfile(entityId);
+            
+            Output(_senderInfo, "=== Companion Profile ===");
+            Output(_senderInfo, profile.GetStatusReport());
+            Output(_senderInfo, "");
+            Output(_senderInfo, "--- Skills ---");
+            foreach (var skill in profile.Skills)
+            {
+                Output(_senderInfo, $"{skill.Key}: Level {skill.Value.Level}/{skill.Value.MaxLevel} (XP: {skill.Value.Experience:F0}/{skill.Value.ExperienceToNextLevel:F0})");
+            }
+        }
+
+        // Phase 7: Squad Commands
+        private void HandleSquad(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            if (_params.Count < 2)
+            {
+                Output(_senderInfo, "Usage: cb squad [add/remove/formation/all/status]");
+                return;
+            }
+
+            string action = _params[1].ToLower();
+            int ownerEntityId = player.entityId;
+
+            switch (action)
+            {
+                case "add":
+                    HandleSquadAdd(_senderInfo, player);
+                    break;
+                case "remove":
+                    HandleSquadRemove(_senderInfo, player);
+                    break;
+                case "formation":
+                    HandleSquadFormation(_params, _senderInfo, player);
+                    break;
+                case "all":
+                    HandleSquadAll(_params, _senderInfo, player);
+                    break;
+                case "status":
+                    HandleSquadStatus(_senderInfo, player);
+                    break;
+                default:
+                    Output(_senderInfo, "Unknown squad action. Use: add, remove, formation, all, status");
+                    break;
+            }
+        }
+
+        private void HandleSquadAdd(CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, "No active companion found");
+                return;
+            }
+
+            int ownerEntityId = player.entityId;
+            int companionEntityId = companion.Entity.entityId;
+            SquadManager.AddToSquad(ownerEntityId, companionEntityId);
+            Output(_senderInfo, $"Companion added to squad (Squad size: {SquadManager.GetSquadSize(ownerEntityId)})");
+        }
+
+        private void HandleSquadRemove(CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, "No active companion found");
+                return;
+            }
+
+            int ownerEntityId = player.entityId;
+            int companionEntityId = companion.Entity.entityId;
+            SquadManager.RemoveFromSquad(ownerEntityId, companionEntityId);
+            Output(_senderInfo, $"Companion removed from squad (Squad size: {SquadManager.GetSquadSize(ownerEntityId)})");
+        }
+
+        private void HandleSquadFormation(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            if (_params.Count < 3)
+            {
+                Output(_senderInfo, "Usage: cb squad formation <line/wedge/circle/column/free>");
+                return;
+            }
+
+            string formationName = _params[2].ToLower();
+            FormationType formation;
+
+            switch (formationName)
+            {
+                case "line":
+                    formation = FormationType.Line;
+                    break;
+                case "wedge":
+                    formation = FormationType.Wedge;
+                    break;
+                case "circle":
+                    formation = FormationType.Circle;
+                    break;
+                case "column":
+                    formation = FormationType.Column;
+                    break;
+                case "free":
+                    formation = FormationType.Free;
+                    break;
+                default:
+                    Output(_senderInfo, "Unknown formation. Use: line, wedge, circle, column, free");
+                    return;
+            }
+
+            int ownerEntityId = player.entityId;
+            SquadManager.SetFormation(ownerEntityId, formation);
+            Output(_senderInfo, $"Squad formation set to {formation}");
+        }
+
+        private void HandleSquadAll(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            if (_params.Count < 3)
+            {
+                Output(_senderInfo, "Usage: cb squad all [follow/guard/attack]");
+                return;
+            }
+
+            string command = _params[2].ToLower();
+            int ownerEntityId = player.entityId;
+
+            switch (command)
+            {
+                case "follow":
+                    SquadManager.AllFollow(ownerEntityId);
+                    Output(_senderInfo, "All squad members set to follow");
+                    break;
+                case "guard":
+                    SquadManager.AllGuard(ownerEntityId, player.position);
+                    Output(_senderInfo, $"All squad members set to guard at {player.position}");
+                    break;
+                case "attack":
+                    SquadManager.AllAttack(ownerEntityId);
+                    Output(_senderInfo, "All squad members attacking current target");
+                    break;
+                default:
+                    Output(_senderInfo, "Unknown squad command. Use: follow, guard, attack");
+                    break;
+            }
+        }
+
+        private void HandleSquadStatus(CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            int ownerEntityId = player.entityId;
+            var squad = SquadManager.GetSquad(ownerEntityId);
+            
+            Output(_senderInfo, "=== Squad Status ===");
+            Output(_senderInfo, $"Squad Size: {squad.MemberEntityIds.Count}");
+            Output(_senderInfo, $"Formation: {squad.Formation}");
+            Output(_senderInfo, $"Formation Active: {squad.IsFormationActive}");
+            Output(_senderInfo, $"Spacing: {squad.FormationSpacing}m");
+            Output(_senderInfo, "");
+            Output(_senderInfo, "--- Members ---");
+            
+            foreach (int entityId in squad.MemberEntityIds)
+            {
+                var companion = CompanionManager.GetCompanion(entityId);
+                if (companion != null && companion.Entity != null && !companion.Entity.IsDead())
+                {
+                    var profile = ProfileManager.GetProfile(entityId);
+                    float distance = Vector3.Distance(player.position, companion.Entity.position);
+                    Output(_senderInfo, $"{profile.Name} ({profile.Class}) - HP: {companion.Entity.Health}/{companion.Entity.GetMaxHealth()} - Distance: {distance:F1}m");
+                }
             }
         }
 

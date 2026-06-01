@@ -132,6 +132,13 @@ namespace CompanionBot
             }
 
             CompanionAI.Update(companionData);
+            
+            // Advanced AI behaviors (Phase 5)
+            var owner = companionData.Owner;
+            if (owner != null && !owner.IsDead())
+            {
+                AdvancedAI.Update(__instance, owner);
+            }
         }
     }
 
@@ -152,6 +159,7 @@ namespace CompanionBot
             var companionData = CompanionManager.GetCompanion(__instance.entityId);
             if (companionData != null)
             {
+                AdvancedAI.RemoveBehaviorData(__instance.entityId);
                 CompanionManager.UnregisterCompanion(__instance.entityId);
                 Log.Out($"[CompanionBot] Companion died: {__instance.entityId}");
                 _ = ModMain.Chat?.SendMessage("companion_death", "Компаньон погиб");
