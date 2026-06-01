@@ -3,7 +3,7 @@
 	<append xpath="/entity_classes">
 
 <entity_class name="companionBot">
-	<property name="Class" value="EntityNPC"/>
+	<property name="Class" value="EntitySurvivor"/>
 	<property name="UserSpawnType" value="Console"/>
 	<property name="Tags" value="entity,npc,human,companion"/>
 	<property name="EntityType" value="Player"/>

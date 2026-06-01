@@ -12,6 +12,7 @@ namespace CompanionBot
         private static int _lastDayNumber = -1;
         private static bool _wasHordeNight = false;
         private static Dictionary<int, float> _lastLowHpWarning = new Dictionary<int, float>();
+        private static float _lastIdleMessageTime = 0f;
 
         static void Postfix()
         {
@@ -27,13 +28,11 @@ namespace CompanionBot
             CheckHordeNight();
             CheckPlayerHealth();
             CheckCompanionHealth();
+            CheckIdleChatter();
         }
 
         private static void CheckDayNightCycle()
         {
-            if (GameManager.Instance == null)
-                return;
-
             int currentDay = GameUtils.WorldTimeToDays(GameManager.Instance.World.worldTime);
             bool isDay = GameApi.IsDay();
 
@@ -56,9 +55,6 @@ namespace CompanionBot
 
         private static void CheckHordeNight()
         {
-            if (GameManager.Instance == null)
-                return;
-
             int dayNumber = GameUtils.WorldTimeToDays(GameManager.Instance.World.worldTime);
             bool isBloodMoon = dayNumber % 7 == 0;
             bool isNight = !GameApi.IsDay();
@@ -123,115 +119,10 @@ namespace CompanionBot
                 }
             }
         }
-    }
 
-    [HarmonyPatch(typeof(CraftingManager), "CraftItem")]
-    public class CraftingTriggerPatch
-    {
-        static void Postfix(ItemValue _itemValue, int _count)
+        private static void CheckIdleChatter()
         {
-            if (_itemValue == null || ModMain.MemoryLog == null)
-                return;
-
-            string itemName = _itemValue.ItemClass.GetItemName();
-            ModMain.MemoryLog.LogCrafting(itemName, _count);
-            _ = ModMain.Chat?.SendMessage("crafting", $"Скрафтил {itemName}!");
-        }
-    }
-
-    [HarmonyPatch(typeof(Block), "OnBlockAdded")]
-    public class BuildingTriggerPatch
-    {
-        static void Postfix(Block __instance, Vector3i _blockPos)
-        {
-            if (__instance == null || ModMain.MemoryLog == null)
-                return;
-
-            string blockName = __instance.GetBlockName();
-
-            if (IsBuildingBlock(blockName))
-            {
-                ModMain.MemoryLog.LogBuilding(blockName, 1);
-
-                if (UnityEngine.Random.value < 0.1f)
-                {
-                    _ = ModMain.Chat?.SendMessage("building", $"Построил {blockName}!");
-                }
-            }
-        }
-
-        private static bool IsBuildingBlock(string blockName)
-        {
-            return blockName.Contains("woodFrame") ||
-                   blockName.Contains("brickBlock") ||
-                   blockName.Contains("concreteBlock") ||
-                   blockName.Contains("steelBlock") ||
-                   blockName.Contains("flagstoneBlock") ||
-                   blockName.Contains("cobblestoneBlock");
-        }
-    }
-
-    [HarmonyPatch(typeof(EntityPlayer), "ExplorePOI")]
-    public class ExplorationTriggerPatch
-    {
-        static void Postfix(EntityPlayer __instance, string _poiName)
-        {
-            if (__instance == null || string.IsNullOrEmpty(_poiName) || ModMain.MemoryLog == null)
-                return;
-
-            ModMain.MemoryLog.LogExploration(_poiName);
-            _ = ModMain.Chat?.SendMessage("exploration", $"Исследуем {_poiName}!");
-        }
-    }
-
-    [HarmonyPatch(typeof(EntityPlayer), "OnPlayerChat")]
-    public class PlayerChatTriggerPatch
-    {
-        static bool Prefix(EntityPlayer __instance, string _message)
-        {
-            if (__instance == null || string.IsNullOrEmpty(_message))
-                return true;
-
-            if (_message.StartsWith("@companion") || _message.StartsWith("/companion"))
-            {
-                string userMessage = _message.Substring(_message.IndexOf(' ') + 1);
-
-                if (ModMain.Chat != null)
-                {
-                    _ = ModMain.Chat.SendMessage("player_dialogue", userMessage);
-                }
-
-                return false;
-            }
-
-            return true;
-        }
-    }
-
-    public class IdleChatterSystem
-    {
-        private static float _lastIdleMessageTime = 0f;
-        private static float _idleMessageInterval = 300f;
-
-        private static string[] _idleMessages = {
-            "Хороший день для выживания!",
-            "Интересно, что мы найдём сегодня?",
-            "Мне нравится эта местность.",
-            "Мы отличная команда!",
-            "Надеюсь, сегодня будет спокойный день.",
-            "Какой красивый закат!",
-            "Нужно быть начеку.",
-            "У нас хорошая база.",
-            "Интересно, есть ли здесь другие выжившие?",
-            "Сегодня мы сделали много работы!"
-        };
-
-        public static void Update()
-        {
-            if (ModMain.Chat == null)
-                return;
-
-            if (Time.time - _lastIdleMessageTime < _idleMessageInterval)
+            if (Time.time - _lastIdleMessageTime < 300f)
                 return;
 
             var companions = CompanionManager.GetAllCompanions();
@@ -253,20 +144,36 @@ namespace CompanionBot
             if (UnityEngine.Random.value < 0.3f)
             {
                 _lastIdleMessageTime = Time.time;
-                string message = _idleMessages[UnityEngine.Random.Range(0, _idleMessages.Length)];
-                _ = ModMain.Chat.SendMessage("idle_chatter", message);
+                string[] messages = {
+                    "Хороший день для выживания!",
+                    "Интересно, что мы найдём сегодня?",
+                    "Мне нравится эта местность.",
+                    "Мы отличная команда!",
+                    "Надеюсь, сегодня будет спокойный день."
+                };
+                _ = ModMain.Chat.SendMessage("idle_chatter", messages[UnityEngine.Random.Range(0, messages.Length)]);
             }
         }
     }
 
-    [HarmonyPatch(typeof(EntityAlive), "Update")]
-    public class IdleChatterPatch
+    [HarmonyPatch(typeof(EntityPlayer), "OnPlayerChat")]
+    public class PlayerChatTriggerPatch
     {
-        static void Postfix(EntityAlive __instance)
+        static void Postfix(EntityPlayer __instance, string _message, ref bool _result)
         {
-            if (__instance is EntityPlayer)
+            if (__instance == null || string.IsNullOrEmpty(_message))
+                return;
+
+            if (_message.StartsWith("@companion") || _message.StartsWith("/companion"))
             {
-                IdleChatterSystem.Update();
+                string userMessage = _message.Substring(_message.IndexOf(' ') + 1);
+
+                if (ModMain.Chat != null)
+                {
+                    _ = ModMain.Chat.SendMessage("player_dialogue", userMessage);
+                }
+
+                _result = true;
             }
         }
     }
