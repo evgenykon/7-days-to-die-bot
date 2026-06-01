@@ -186,50 +186,6 @@ namespace CompanionBot
         }
     }
 
-    [HarmonyPatch(typeof(EntityAlive), "FireWeapon")]
-    public class FireWeaponPatch
-    {
-        static void Postfix(EntityAlive __instance)
-        {
-            if (__instance == null)
-                return;
-
-            var companionData = CompanionManager.GetCompanion(__instance.entityId);
-            if (companionData == null)
-                return;
-
-            var weapon = InventorySystem.GetInventory(__instance.entityId).GetEquippedItem(EquipmentSlot.Weapon);
-            if (weapon != null)
-            {
-                string ammoType = GetAmmoTypeForWeapon(weapon.ItemName);
-                if (!string.IsNullOrEmpty(ammoType))
-                {
-                    InventorySystem.UseAmmo(__instance.entityId, ammoType, 1);
-                }
-
-                InventorySystem.ApplyDurabilityDamage(__instance.entityId, EquipmentSlot.Weapon, 0.5f);
-            }
-        }
-
-        private static string GetAmmoTypeForWeapon(string weaponName)
-        {
-            weaponName = weaponName.ToLower();
-
-            if (weaponName.Contains("ak47") || weaponName.Contains("rifle"))
-                return "ammo762mmBulletBall";
-            if (weaponName.Contains("pistol") || weaponName.Contains("9mm"))
-                return "ammo9mmBulletBall";
-            if (weaponName.Contains("shotgun"))
-                return "ammoShotgunShell";
-            if (weaponName.Contains("sniper") || weaponName.Contains("hunting"))
-                return "ammo762mmBulletBall";
-            if (weaponName.Contains("smg") || weaponName.Contains("mp5"))
-                return "ammo9mmBulletBall";
-
-            return null;
-        }
-    }
-
     [HarmonyPatch(typeof(EntityAlive), "OnEntityDeath")]
     public class LootPickupPatch
     {

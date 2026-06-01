@@ -84,16 +84,10 @@
 
 <entity_class name="companionBotFemale" extends="companionBot">
 	<property name="Gender" value="female"/>
-	<property name="AvatarController" value="AvatarSDCSController"/>
-	<property name="ModelType" value="NpcUMA"/>
-	<property name="PhysicsBody" value="PlayerSDCS"/>
 </entity_class>
 
 <entity_class name="companionBotFemaleArmed" extends="companionBotArmed">
 	<property name="Gender" value="female"/>
-	<property name="AvatarController" value="AvatarSDCSController"/>
-	<property name="ModelType" value="NpcUMA"/>
-	<property name="PhysicsBody" value="PlayerSDCS"/>
 </entity_class>
 
 	</append>
