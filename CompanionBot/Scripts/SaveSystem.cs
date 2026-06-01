@@ -208,21 +208,21 @@ namespace CompanionBot
         private static string GetEntityTypeName(EntityAlive entity)
         {
             if (entity == null)
-                return "companionbot";
+                return "companionBot";
 
             var entityClass = entity.GetType().Name;
 
             if (entityClass.Contains("Female") || entityClass.Contains("female"))
             {
                 if (entityClass.Contains("Armed") || entityClass.Contains("armed"))
-                    return "companionbotfemalearmed";
-                return "companionbotfemale";
+                    return "companionBotFemaleArmed";
+                return "companionBotFemale";
             }
             else
             {
                 if (entityClass.Contains("Armed") || entityClass.Contains("armed"))
-                    return "companionbotarmed";
-                return "companionbot";
+                    return "companionBotArmed";
+                return "companionBot";
             }
         }
 

@@ -201,7 +201,7 @@ Advanced Features (Phase 10):
 
         private void HandleSpawn(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
         {
-            string entityType = "companionbot";
+            string entityType = "companionBot";
             string gender = "male";
 
             if (_params.Count > 1)
@@ -210,20 +210,20 @@ Advanced Features (Phase 10):
                 switch (type)
                 {
                     case "male":
-                        entityType = "companionbot";
+                        entityType = "companionBot";
                         gender = "male";
                         break;
                     case "female":
-                        entityType = "companionbotfemale";
+                        entityType = "companionBotFemale";
                         gender = "female";
                         break;
                     case "armed":
-                        entityType = "companionbotarmed";
+                        entityType = "companionBotArmed";
                         gender = "male";
                         break;
                     case "armedfemale":
                     case "femalearmed":
-                        entityType = "companionbotfemalearmed";
+                        entityType = "companionBotFemaleArmed";
                         gender = "female";
                         break;
                     default:
