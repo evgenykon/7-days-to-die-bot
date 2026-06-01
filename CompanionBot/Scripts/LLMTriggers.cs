@@ -125,44 +125,6 @@ namespace CompanionBot
         }
     }
 
-    [HarmonyPatch(typeof(EntityPlayer), "AddItemToInventory")]
-    public class LootPickupTriggerPatch
-    {
-        static void Postfix(EntityPlayer __instance, ItemStack _itemStack)
-        {
-            if (__instance == null || _itemStack == null || ModMain.MemoryLog == null)
-                return;
-
-            string itemName = _itemStack.itemValue.ItemClass.GetItemName();
-            int count = _itemStack.count;
-
-            if (IsRareItem(itemName))
-            {
-                ModMain.MemoryLog.LogLoot(itemName, count);
-                _ = ModMain.Chat?.SendMessage("loot", $"Нашёл {count}x {itemName}!");
-            }
-        }
-
-        private static bool IsRareItem(string itemName)
-        {
-            string[] rareItems = {
-                "gunRifleT2SniperRifle", "gunRifleT3AutoSniper",
-                "gunShotgunT3AutoShotgun", "gunMGT3MachineGun",
-                "armorSteelSet", "meleeWpnBatonT2StunBaton",
-                "resourceRocketCasing", "ammoRocketHE",
-                "vehicleMinibike", "vehicleMotorcycle", "vehicle4x4Truck"
-            };
-
-            foreach (var rare in rareItems)
-            {
-                if (itemName.Contains(rare))
-                    return true;
-            }
-
-            return false;
-        }
-    }
-
     [HarmonyPatch(typeof(CraftingManager), "CraftItem")]
     public class CraftingTriggerPatch
     {
