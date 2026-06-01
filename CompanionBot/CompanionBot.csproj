@@ -6,11 +6,18 @@
     <AssemblyName>CompanionBot</AssemblyName>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Configurations>Debug;Release;Test</Configurations>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test|AnyCPU'">
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <Optimize>false</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
@@ -53,7 +60,7 @@
     <Reference Include="System.Net.Http" />
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' != 'Test'">
     <Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;$(GamePath)\Mods\CompanionBot\$(TargetFileName)&quot;" />
     <Exec Command="xcopy /E /I /Y &quot;$(ProjectDir)Config&quot; &quot;$(GamePath)\Mods\CompanionBot\Config&quot;" />
     <Exec Command="copy /Y &quot;$(ProjectDir)ModInfo.xml&quot; &quot;$(GamePath)\Mods\CompanionBot\ModInfo.xml&quot;" />
