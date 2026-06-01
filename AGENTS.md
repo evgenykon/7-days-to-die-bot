@@ -31,17 +31,29 @@ ai-7d2d/
     ├── ModInfo.xml                # Mod metadata
     ├── Config/
     │   ├── entityclasses.xml      # NPC entity definitions (XML patching)
-    │   └── llm_config.json        # LLM endpoint, model, personality settings
+    │   ├── llm_config.json        # LLM endpoint, model, personality settings
+    │   └── global_config.json     # Global tunable parameters (auto-generated)
     ├── Scripts/
     │   ├── CompanionBot.cs        # Harmony patches + main mod entry
     │   ├── CompanionManager.cs    # Companion state management (Follow/Stay/Guard)
-    │   ├── ConsoleCommands.cs     # Console commands (cb spawn/follow/stay/guard/dismiss/status/heal/equip/unequip/inventory/autopickup/stats + Phase 5/6/7 commands)
+    │   ├── ConsoleCommands.cs     # Console commands (cb spawn/follow/stay/guard/dismiss/status/heal/equip/unequip/inventory/autopickup/stats + Phase 5/6/7/8/9/10 commands)
     │   ├── CombatSystem.cs        # Combat AI (target priority, retreat, line-of-fire checks, melee combos, dodge/strafe, ammo management, damage feedback, statistics)
     │   ├── InventorySystem.cs     # Inventory management (equipment slots, items, ammo, durability, auto-pickup)
     │   ├── SaveSystem.cs          # Save/load companions and inventory across game sessions
     │   ├── AdvancedAI.cs          # Advanced AI behaviors (patrol, escort, scout, horde defense, day/night cycle)
     │   ├── CompanionProfile.cs    # Companion customization (name, class, personality, skills, leveling)
     │   ├── SquadManager.cs        # Squad management (formations, group commands, multi-companion coordination)
+    │   ├── SquadRoles.cs          # Squad role system (Leader, Assault, Support, Medic, Sniper, Tank, Scout)
+    │   ├── SharedInventory.cs     # Shared inventory pool for squad members
+    │   ├── CompanionInteraction.cs # Companion-to-companion interactions (healing, ammo sharing, coordination)
+    │   ├── DeathConsequences.cs   # Death consequence system (respawn, permadeath, cooldown)
+    │   ├── GlobalConfig.cs        # Global configuration for all tunable parameters
+    │   ├── Localization.cs        # Localization system (EN, RU)
+    │   ├── QuestSystem.cs         # Quest system (companion gives quests to player)
+    │   ├── CompanionCrafting.cs   # Companion crafting system
+    │   ├── BaseBuildingAssistant.cs # Base building assistance (repair, upgrade)
+    │   ├── AnimalCompanion.cs     # Animal companion variants (dog, wolf, bear)
+    │   ├── DroneCompanion.cs      # Drone companion variant (flying, scouting, support)
     │   ├── LLMClient.cs           # HTTP client for LM Studio API
     │   ├── ChatSystem.cs          # Context-aware messaging
     │   ├── RAGSystem.cs           # Vector store + semantic search

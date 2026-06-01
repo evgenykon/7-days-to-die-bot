@@ -53,7 +53,28 @@ Squad (Phase 7):
   cb squad all follow - All squad members follow
   cb squad all guard  - All squad members guard
   cb squad all attack - All squad members attack current target
-  cb squad status     - Show squad status";
+  cb squad status     - Show squad status
+  
+Multi-Companion (Phase 8):
+  cb role <role>      - Assign role (leader/assault/support/medic/sniper/tank/scout)
+  cb shared [on/off]  - Toggle shared inventory
+  cb distribute <type> - Distribute items (ammo/healing)
+  
+Integration (Phase 9):
+  cb death <type>     - Set death consequence (respawn/permadeath/cooldown)
+  cb config reset     - Reset configuration to defaults
+  cb language <lang>  - Set language (en/ru)
+  
+Advanced Features (Phase 10):
+  cb quest list       - List available and active quests
+  cb quest accept <id> - Accept quest
+  cb craft [item]     - Start crafting (no args = show recipes)
+  cb build <action>   - Building tasks (repair/upgrade/cancel)
+  cb animal spawn <type> - Spawn animal companion (dog/wolf/bear)
+  cb animal feed <item> - Feed animal companion
+  cb drone spawn      - Deploy drone
+  cb drone mode <mode> - Set drone mode (follow/patrol/scout/attack/support)
+  cb drone recharge   - Recharge drone battery";
         }
 
         public override void Execute(List<string> _params, CommandSenderInfo _senderInfo)
@@ -137,6 +158,39 @@ Squad (Phase 7):
                     break;
                 case "squad":
                     HandleSquad(_params, _senderInfo, player);
+                    break;
+                case "role":
+                    HandleRole(_params, _senderInfo, player);
+                    break;
+                case "shared":
+                    HandleShared(_params, _senderInfo, player);
+                    break;
+                case "distribute":
+                    HandleDistribute(_params, _senderInfo, player);
+                    break;
+                case "death":
+                    HandleDeath(_params, _senderInfo, player);
+                    break;
+                case "config":
+                    HandleConfig(_params, _senderInfo, player);
+                    break;
+                case "language":
+                    HandleLanguage(_params, _senderInfo, player);
+                    break;
+                case "quest":
+                    HandleQuest(_params, _senderInfo, player);
+                    break;
+                case "craft":
+                    HandleCraft(_params, _senderInfo, player);
+                    break;
+                case "build":
+                    HandleBuild(_params, _senderInfo, player);
+                    break;
+                case "animal":
+                    HandleAnimal(_params, _senderInfo, player);
+                    break;
+                case "drone":
+                    HandleDrone(_params, _senderInfo, player);
                     break;
                 default:
                     Output(_senderInfo, $"Unknown command: {command}");
@@ -1074,6 +1128,415 @@ Squad (Phase 7):
         private void OutputHelp(CommandSenderInfo _senderInfo)
         {
             Output(_senderInfo, GetHelp());
+        }
+
+        // Phase 8: Multi-Companion Support
+        private void HandleRole(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, Localization.Get("no_companion"));
+                return;
+            }
+
+            if (_params.Count < 2)
+            {
+                Output(_senderInfo, "Usage: cb role <leader/assault/support/medic/sniper/tank/scout>");
+                return;
+            }
+
+            string roleName = _params[1].ToLower();
+            SquadRole role;
+
+            switch (roleName)
+            {
+                case "leader": role = SquadRole.Leader; break;
+                case "assault": role = SquadRole.Assault; break;
+                case "support": role = SquadRole.Support; break;
+                case "medic": role = SquadRole.Medic; break;
+                case "sniper": role = SquadRole.Sniper; break;
+                case "tank": role = SquadRole.Tank; break;
+                case "scout": role = SquadRole.Scout; break;
+                default:
+                    Output(_senderInfo, "Unknown role. Use: leader, assault, support, medic, sniper, tank, scout");
+                    return;
+            }
+
+            SquadRoleManager.AssignRole(companion.Entity.entityId, role);
+            Output(_senderInfo, Localization.Get("role_assigned") + $": {role}");
+        }
+
+        private void HandleShared(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            if (_params.Count < 2)
+            {
+                bool isEnabled = SharedInventoryManager.IsEnabled(player.entityId);
+                Output(_senderInfo, $"Shared inventory is currently {(isEnabled ? "enabled" : "disabled")}");
+                Output(_senderInfo, "Usage: cb shared [on/off]");
+                return;
+            }
+
+            string setting = _params[1].ToLower();
+            bool enable = setting == "on" || setting == "true" || setting == "1";
+
+            SharedInventoryManager.EnableSharedInventory(player.entityId, enable);
+            Output(_senderInfo, enable ? Localization.Get("shared_inventory_enabled") : Localization.Get("shared_inventory_disabled"));
+        }
+
+        private void HandleDistribute(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            if (_params.Count < 2)
+            {
+                Output(_senderInfo, "Usage: cb distribute [ammo/healing]");
+                return;
+            }
+
+            string type = _params[1].ToLower();
+
+            switch (type)
+            {
+                case "ammo":
+                    SharedInventoryManager.DistributeAmmo(player.entityId);
+                    Output(_senderInfo, Localization.Get("ammo_distributed"));
+                    break;
+                case "healing":
+                    SharedInventoryManager.DistributeHealingItems(player.entityId);
+                    Output(_senderInfo, Localization.Get("healing_distributed"));
+                    break;
+                default:
+                    Output(_senderInfo, "Unknown type. Use: ammo, healing");
+                    break;
+            }
+        }
+
+        // Phase 9: Integration & Polish
+        private void HandleDeath(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            if (_params.Count < 2)
+            {
+                var settings = DeathConsequenceManager.GetCurrentSettings();
+                Output(_senderInfo, $"Current death consequence: {settings.Consequence}");
+                Output(_senderInfo, "Usage: cb death [respawn/permadeath/cooldown]");
+                return;
+            }
+
+            string type = _params[1].ToLower();
+            DeathConsequence consequence;
+
+            switch (type)
+            {
+                case "respawn": consequence = DeathConsequence.Respawn; break;
+                case "permadeath": consequence = DeathConsequence.Permadeath; break;
+                case "cooldown": consequence = DeathConsequence.Cooldown; break;
+                default:
+                    Output(_senderInfo, "Unknown type. Use: respawn, permadeath, cooldown");
+                    return;
+            }
+
+            DeathConsequenceManager.SetConsequence(consequence);
+            Output(_senderInfo, $"Death consequence set to: {consequence}");
+        }
+
+        private void HandleConfig(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            if (_params.Count < 2)
+            {
+                Output(_senderInfo, "Usage: cb config [reset]");
+                return;
+            }
+
+            string action = _params[1].ToLower();
+
+            if (action == "reset")
+            {
+                GlobalConfigManager.ResetToDefaults();
+                Output(_senderInfo, "Configuration reset to defaults");
+            }
+            else
+            {
+                Output(_senderInfo, "Unknown action. Use: reset");
+            }
+        }
+
+        private void HandleLanguage(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            if (_params.Count < 2)
+            {
+                Output(_senderInfo, $"Current language: {Localization.GetLanguage()}");
+                Output(_senderInfo, "Available languages: " + string.Join(", ", Localization.GetAvailableLanguages()));
+                Output(_senderInfo, "Usage: cb language <lang>");
+                return;
+            }
+
+            string lang = _params[1].ToLower();
+            Localization.SetLanguage(lang);
+            Output(_senderInfo, $"Language set to: {lang}");
+        }
+
+        // Phase 10: Stretch Goals
+        private void HandleQuest(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, Localization.Get("no_companion"));
+                return;
+            }
+
+            if (_params.Count < 2)
+            {
+                Output(_senderInfo, "Usage: cb quest [list/accept]");
+                return;
+            }
+
+            string action = _params[1].ToLower();
+
+            switch (action)
+            {
+                case "list":
+                    var available = QuestSystem.GetAvailableQuests(companion.Entity.entityId);
+                    var active = QuestSystem.GetActiveQuests(companion.Entity.entityId);
+
+                    Output(_senderInfo, "=== Available Quests ===");
+                    foreach (var quest in available)
+                    {
+                        Output(_senderInfo, $"[{quest.Id}] {quest.Title} - {quest.Description} (Reward: {quest.RewardXP} XP)");
+                    }
+
+                    Output(_senderInfo, "");
+                    Output(_senderInfo, "=== Active Quests ===");
+                    foreach (var quest in active)
+                    {
+                        Output(_senderInfo, $"[{quest.Id}] {quest.Title} - Progress: {quest.CurrentProgress}/{quest.TargetCount} ({quest.GetProgressPercent() * 100:F0}%)");
+                    }
+                    break;
+
+                case "accept":
+                    if (_params.Count < 3)
+                    {
+                        Output(_senderInfo, "Usage: cb quest accept <quest_id>");
+                        return;
+                    }
+                    string questId = _params[2];
+                    if (QuestSystem.AcceptQuest(companion.Entity.entityId, questId))
+                    {
+                        Output(_senderInfo, "Quest accepted");
+                    }
+                    else
+                    {
+                        Output(_senderInfo, "Failed to accept quest");
+                    }
+                    break;
+
+                default:
+                    Output(_senderInfo, "Unknown action. Use: list, accept");
+                    break;
+            }
+        }
+
+        private void HandleCraft(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, Localization.Get("no_companion"));
+                return;
+            }
+
+            if (_params.Count < 2)
+            {
+                var recipes = CompanionCrafting.GetAvailableRecipes(companion.Entity.entityId);
+                Output(_senderInfo, "=== Available Recipes ===");
+                foreach (var recipe in recipes)
+                {
+                    Output(_senderInfo, recipe);
+                }
+                Output(_senderInfo, "");
+                Output(_senderInfo, "Usage: cb craft <item_name>");
+                return;
+            }
+
+            string itemName = _params[1];
+            if (CompanionCrafting.StartCrafting(companion.Entity.entityId, itemName))
+            {
+                Output(_senderInfo, Localization.Get("crafting_started", itemName));
+            }
+            else
+            {
+                Output(_senderInfo, "Failed to start crafting");
+            }
+        }
+
+        private void HandleBuild(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, Localization.Get("no_companion"));
+                return;
+            }
+
+            if (_params.Count < 2)
+            {
+                Output(_senderInfo, "Usage: cb build [repair/upgrade/cancel]");
+                return;
+            }
+
+            string action = _params[1].ToLower();
+
+            switch (action)
+            {
+                case "repair":
+                    BaseBuildingAssistant.SetRepairTask(companion.Entity.entityId, player.position, 0);
+                    Output(_senderInfo, Localization.Get("building_repair"));
+                    break;
+
+                case "upgrade":
+                    BaseBuildingAssistant.SetUpgradeTask(companion.Entity.entityId, player.position, 0);
+                    Output(_senderInfo, Localization.Get("building_upgrade"));
+                    break;
+
+                case "cancel":
+                    BaseBuildingAssistant.CancelTask(companion.Entity.entityId);
+                    Output(_senderInfo, "Building task cancelled");
+                    break;
+
+                default:
+                    Output(_senderInfo, "Unknown action. Use: repair, upgrade, cancel");
+                    break;
+            }
+        }
+
+        private void HandleAnimal(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            if (_params.Count < 2)
+            {
+                Output(_senderInfo, "Usage: cb animal [spawn/feed]");
+                return;
+            }
+
+            string action = _params[1].ToLower();
+
+            switch (action)
+            {
+                case "spawn":
+                    if (_params.Count < 3)
+                    {
+                        Output(_senderInfo, "Usage: cb animal spawn <dog/wolf/bear>");
+                        return;
+                    }
+                    string typeName = _params[2].ToLower();
+                    AnimalType animalType;
+
+                    switch (typeName)
+                    {
+                        case "dog": animalType = AnimalType.Dog; break;
+                        case "wolf": animalType = AnimalType.Wolf; break;
+                        case "bear": animalType = AnimalType.Bear; break;
+                        default:
+                            Output(_senderInfo, "Unknown animal. Use: dog, wolf, bear");
+                            return;
+                    }
+
+                    int animalEntityId = player.entityId + 10000;
+                    AnimalCompanionManager.RegisterAnimal(animalEntityId, animalType, player);
+                    Output(_senderInfo, Localization.Get("animal_tamed") + $": {animalType}");
+                    break;
+
+                case "feed":
+                    if (_params.Count < 3)
+                    {
+                        Output(_senderInfo, "Usage: cb animal feed <item>");
+                        return;
+                    }
+                    string foodItem = _params[2];
+                    var animals = AnimalCompanionManager.GetAllAnimals();
+                    if (animals.Count > 0)
+                    {
+                        AnimalCompanionManager.FeedAnimal(animals[0].EntityId, foodItem);
+                        Output(_senderInfo, $"Animal fed with {foodItem}");
+                    }
+                    else
+                    {
+                        Output(_senderInfo, "No animal companion found");
+                    }
+                    break;
+
+                default:
+                    Output(_senderInfo, "Unknown action. Use: spawn, feed");
+                    break;
+            }
+        }
+
+        private void HandleDrone(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            if (_params.Count < 2)
+            {
+                Output(_senderInfo, "Usage: cb drone [spawn/mode/recharge]");
+                return;
+            }
+
+            string action = _params[1].ToLower();
+
+            switch (action)
+            {
+                case "spawn":
+                    int droneEntityId = player.entityId + 20000;
+                    DroneCompanionManager.RegisterDrone(droneEntityId, player);
+                    Output(_senderInfo, Localization.Get("drone_deployed"));
+                    break;
+
+                case "mode":
+                    if (_params.Count < 3)
+                    {
+                        Output(_senderInfo, "Usage: cb drone mode <follow/patrol/scout/attack/support>");
+                        return;
+                    }
+                    string modeName = _params[2].ToLower();
+                    DroneMode mode;
+
+                    switch (modeName)
+                    {
+                        case "follow": mode = DroneMode.Follow; break;
+                        case "patrol": mode = DroneMode.Patrol; break;
+                        case "scout": mode = DroneMode.Scout; break;
+                        case "attack": mode = DroneMode.Attack; break;
+                        case "support": mode = DroneMode.Support; break;
+                        default:
+                            Output(_senderInfo, "Unknown mode. Use: follow, patrol, scout, attack, support");
+                            return;
+                    }
+
+                    var drones = DroneCompanionManager.GetAllDrones();
+                    if (drones.Count > 0)
+                    {
+                        DroneCompanionManager.SetDroneMode(drones[0].EntityId, mode);
+                        Output(_senderInfo, $"Drone mode set to: {mode}");
+                    }
+                    else
+                    {
+                        Output(_senderInfo, "No drone found");
+                    }
+                    break;
+
+                case "recharge":
+                    var droneList = DroneCompanionManager.GetAllDrones();
+                    if (droneList.Count > 0)
+                    {
+                        DroneCompanionManager.RechargeDrone(droneList[0].EntityId, 50f);
+                        Output(_senderInfo, "Drone recharged (+50 battery)");
+                    }
+                    else
+                    {
+                        Output(_senderInfo, "No drone found");
+                    }
+                    break;
+
+                default:
+                    Output(_senderInfo, "Unknown action. Use: spawn, mode, recharge");
+                    break;
+            }
         }
     }
 }

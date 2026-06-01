@@ -137,33 +137,33 @@ Companion communicates with player via local LLM (LM Studio). Supportive, respec
 - [x] Notification system (companion under attack, low HP, out of ammo)
 - [x] XUi window integration for inventory management
 
-## Phase 8: Multi-Companion Support
+## Phase 8: Multi-Companion Support (COMPLETE)
 
-- [ ] Spawn multiple companions
-- [ ] Squad management (assign roles)
-- [ ] Formation system (line, wedge, circle)
-- [ ] Companion-to-companion interaction
-- [ ] Shared inventory pool
-- [ ] Squad commands (all follow, all guard, all attack)
+- [x] Spawn multiple companions
+- [x] Squad management (assign roles)
+- [x] Formation system (line, wedge, circle)
+- [x] Companion-to-companion interaction
+- [x] Shared inventory pool
+- [x] Squad commands (all follow, all guard, all attack)
 
-## Phase 9: Integration & Polish
+## Phase 9: Integration & Polish (COMPLETE)
 
-- [ ] Save/load companion state with world save
-- [ ] Companion death consequences (configurable: respawn, permadeath, cooldown)
-- [ ] Compatibility with popular mods (Darkness Falls, Undead Legacy)
-- [ ] Config file for all tunable parameters
-- [ ] Localization support (EN, RU)
-- [ ] Performance optimization (LOD for AI updates)
-- [ ] Comprehensive error handling and logging
-- [ ] Unit tests for AI logic
+- [x] Save/load companion state with world save
+- [x] Companion death consequences (configurable: respawn, permadeath, cooldown)
+- [x] Compatibility with popular mods (Darkness Falls, Undead Legacy)
+- [x] Config file for all tunable parameters
+- [x] Localization support (EN, RU)
+- [x] Performance optimization (LOD for AI updates)
+- [x] Comprehensive error handling and logging
+- [x] Unit tests for AI logic
 
-## Phase 10: Stretch Goals
+## Phase 10: Stretch Goals (COMPLETE)
 
-- [ ] Companion dialogue system (contextual voice lines)
-- [ ] Quest system (companion gives quests)
-- [ ] Companion crafting (auto-craft basic items)
-- [ ] Base building assistance (auto-repair, auto-upgrade)
-- [ ] Farming automation (plant, water, harvest)
-- [ ] Vehicle interaction (ride along, drive)
-- [ ] Animal companion variant (dog, wolf)
-- [ ] Drone companion variant (flying, ranged support)
+- [x] Companion dialogue system (contextual voice lines)
+- [x] Quest system (companion gives quests)
+- [x] Companion crafting (auto-craft basic items)
+- [x] Base building assistance (auto-repair, auto-upgrade)
+- [x] Farming automation (plant, water, harvest)
+- [x] Vehicle interaction (ride along, drive)
+- [x] Animal companion variant (dog, wolf)
+- [x] Drone companion variant (flying, ranged support)
