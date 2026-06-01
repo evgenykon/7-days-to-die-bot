@@ -145,14 +145,14 @@ namespace CompanionBot
     [HarmonyPatch(typeof(EntityAlive), "OnEntityDeath")]
     public class CompanionDeathPatch
     {
-        static void Postfix(EntityAlive __instance, EntityAlive _attackingEntity)
+        static void Postfix(EntityAlive __instance)
         {
             if (__instance == null)
                 return;
 
             if (__instance is EntityPlayer)
             {
-                ModMain.MemoryLog?.LogDeath(__instance, _attackingEntity);
+                ModMain.MemoryLog?.LogDeath(__instance, null);
                 _ = ModMain.Chat?.SendMessage("player_death", "Игрок погиб");
             }
 
