@@ -84,12 +84,12 @@
 
 <entity_class name="companionBotFemale" extends="companionBot">
 	<property name="Gender" value="female"/>
-	<property name="Mesh" value="Player/Female/player_femaleRagdoll"/>
+	<property name="Mesh" value="Player/Male/player_maleRagdoll"/>
 </entity_class>
 
 <entity_class name="companionBotFemaleArmed" extends="companionBotArmed">
 	<property name="Gender" value="female"/>
-	<property name="Mesh" value="Player/Female/player_femaleRagdoll"/>
+	<property name="Mesh" value="Player/Male/player_maleRagdoll"/>
 </entity_class>
 
 	</append>
