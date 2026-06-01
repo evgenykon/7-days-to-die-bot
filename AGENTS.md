@@ -57,7 +57,8 @@ ai-7d2d/
     │   ├── LLMClient.cs           # HTTP client for LM Studio API
     │   ├── ChatSystem.cs          # Context-aware messaging
     │   ├── RAGSystem.cs           # Vector store + semantic search
-    │   └── MemoryLogger.cs        # Game event capture for RAG
+    │   ├── MemoryLogger.cs        # Game event capture for RAG
+    │   └── LLMTriggers.cs         # Harmony patches for LLM communication triggers
     ├── Data/
     │   ├── memories.json          # Persistent RAG memory (gitignored)
     │   └── companions_save.json   # Companion save data (gitignored)

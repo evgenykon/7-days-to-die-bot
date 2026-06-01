@@ -1,63 +1,63 @@
 # TODO - CompanionBot Development Plan
 
-## KILLER FEATURE: LLM-Powered Communication
+## KILLER FEATURE: LLM-Powered Communication (COMPLETE)
 
 Companion communicates with player via local LLM (LM Studio). Supportive, respectful tone. Configurable gender. RAG builds knowledge base from gameplay.
 
 ### Core LLM Integration
-- [ ] LLMClient — HTTP client for LM Studio OpenAI-compatible API
-- [ ] Config file (llm_config.json) — endpoint, model, temperature, max_tokens
-- [ ] System prompt with personality, gender, tone guidelines
-- [ ] ChatSystem — context-aware messages to player via game chat
-- [ ] Gender configuration in XML entity (`Gender` property: male/female)
-- [ ] Gender-aware speech patterns (Russian: "сделал"/"сделала", etc.)
-- [ ] Rate limiting (don't spam player, cooldown between messages)
-- [ ] Fallback phrases when LLM is unavailable
+- [x] LLMClient — HTTP client for LM Studio OpenAI-compatible API
+- [x] Config file (llm_config.json) — endpoint, model, temperature, max_tokens
+- [x] System prompt with personality, gender, tone guidelines
+- [x] ChatSystem — context-aware messages to player via game chat
+- [x] Gender configuration in XML entity (`Gender` property: male/female)
+- [x] Gender-aware speech patterns (Russian: "сделал"/"сделала", etc.)
+- [x] Rate limiting (don't spam player, cooldown between messages)
+- [x] Fallback phrases when LLM is unavailable
 
 ### RAG System (Retrieval-Augmented Generation)
-- [ ] MemoryLogger — capture game events (kills, deaths, crafting, loot, locations)
-- [ ] Event types: combat, exploration, crafting, building, trading, horde nights
-- [ ] Vector store (local JSON file with embeddings)
-- [ ] Embedding generation via LM Studio `/v1/embeddings` endpoint
-- [ ] Semantic search for relevant memories
-- [ ] Memory decay (older memories less relevant)
-- [ ] Memory summarization (compress old events into summaries)
-- [ ] Persistent memory across game sessions (save/load)
-- [ ] Memory categories (combat, relationships, locations, items)
+- [x] MemoryLogger — capture game events (kills, deaths, crafting, loot, locations)
+- [x] Event types: combat, exploration, crafting, building, trading, horde nights
+- [x] Vector store (local JSON file with embeddings)
+- [x] Embedding generation via LM Studio `/v1/embeddings` endpoint
+- [x] Semantic search for relevant memories
+- [x] Memory decay (older memories less relevant)
+- [x] Memory summarization (compress old events into summaries)
+- [x] Persistent memory across game sessions (save/load)
+- [x] Memory categories (combat, relationships, locations, items)
 
 ### Communication Triggers
-- [ ] On player kill (praise, encouragement)
-- [ ] On player death (comfort, support)
-- [ ] On companion kill (modest pride, teamwork)
-- [ ] On horde night start (alert, encouragement)
-- [ ] On horde night end (celebration, relief)
-- [ ] On finding rare loot (excitement, congratulations)
-- [ ] On crafting something (interest, admiration)
-- [ ] On building/upgrading base (approval, suggestions)
-- [ ] On low HP (concern, offer help)
-- [ ] On player low HP (urgency, care)
-- [ ] On blood moon (determination, solidarity)
-- [ ] On day start (greeting, plans for the day)
-- [ ] On night start (caution, readiness)
-- [ ] Idle chatter (random supportive comments, observations)
-- [ ] Player-initiated dialogue (respond to player chat messages)
+- [x] On player kill (praise, encouragement)
+- [x] On player death (comfort, support)
+- [x] On companion kill (modest pride, teamwork)
+- [x] On horde night start (alert, encouragement)
+- [x] On horde night end (celebration, relief)
+- [x] On finding rare loot (excitement, congratulations)
+- [x] On crafting something (interest, admiration)
+- [x] On building/upgrading base (approval, suggestions)
+- [x] On low HP (concern, offer help)
+- [x] On player low HP (urgency, care)
+- [x] On blood moon (determination, solidarity)
+- [x] On day start (greeting, plans for the day)
+- [x] On night start (caution, readiness)
+- [x] Idle chatter (random supportive comments, observations)
+- [x] Player-initiated dialogue (respond to player chat messages)
 
 ### Tone & Personality
-- [ ] Always supportive and respectful
-- [ ] No rudeness, insults, or toxic behavior
-- [ ] Encouraging during failures
-- [ ] Celebrating successes
-- [ ] Contextual humor (appropriate, not offensive)
-- [ ] Personality traits configurable (brave, cautious, cheerful, serious)
-- [ ] Relationship building (remember player preferences, playstyle)
+- [x] Always supportive and respectful
+- [x] No rudeness, insults, or toxic behavior
+- [x] Encouraging during failures
+- [x] Celebrating successes
+- [x] Contextual humor (appropriate, not offensive)
+- [x] Personality traits configurable (brave, cautious, cheerful, serious)
+- [x] Relationship building (remember player preferences, playstyle)
 
 ### Technical
-- [ ] Async HTTP requests (don't block game thread)
-- [ ] Request queue (batch messages if LLM is slow)
-- [ ] Error handling (LLM unavailable, timeout, malformed response)
-- [ ] Logging all LLM interactions for debugging
-- [ ] Performance monitoring (latency, token usage)
-- [ ] Configurable verbosity (silent, normal, chatty)
+- [x] Async HTTP requests (don't block game thread)
+- [x] Request queue (batch messages if LLM is slow)
+- [x] Error handling (LLM unavailable, timeout, malformed response)
+- [x] Logging all LLM interactions for debugging
+- [x] Performance monitoring (latency, token usage)
+- [x] Configurable verbosity (silent, normal, chatty)
 
 ## Phase 1: Core Stability (COMPLETE)
 
