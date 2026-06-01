@@ -15,43 +15,43 @@
 
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>F:\SteamLibrary\steamapps\common\7 Days To Die\7DaysToDie_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>$(GamePath)\7DaysToDie_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="0Harmony">
-      <HintPath>F:\SteamLibrary\steamapps\common\7 Days To Die\Mods\0_TFP_Harmony\0Harmony.dll</HintPath>
+      <HintPath>$(GamePath)\Mods\0_TFP_Harmony\0Harmony.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>F:\SteamLibrary\steamapps\common\7 Days To Die\7DaysToDie_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>$(GamePath)\7DaysToDie_Data\Managed\UnityEngine.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>F:\SteamLibrary\steamapps\common\7 Days To Die\7DaysToDie_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>$(GamePath)\7DaysToDie_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
-      <HintPath>F:\SteamLibrary\steamapps\common\7 Days To Die\7DaysToDie_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
+      <HintPath>$(GamePath)\7DaysToDie_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.AnimationModule">
-      <HintPath>F:\SteamLibrary\steamapps\common\7 Days To Die\7DaysToDie_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
+      <HintPath>$(GamePath)\7DaysToDie_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.AudioModule">
-      <HintPath>F:\SteamLibrary\steamapps\common\7 Days To Die\7DaysToDie_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
+      <HintPath>$(GamePath)\7DaysToDie_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="LogLibrary">
-      <HintPath>F:\SteamLibrary\steamapps\common\7 Days To Die\7DaysToDie_Data\Managed\LogLibrary.dll</HintPath>
+      <HintPath>$(GamePath)\7DaysToDie_Data\Managed\LogLibrary.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;F:\SteamLibrary\steamapps\common\7 Days To Die\Mods\CompanionBot\$(TargetFileName)&quot;" />
-    <Exec Command="xcopy /E /I /Y &quot;$(ProjectDir)Config&quot; &quot;F:\SteamLibrary\steamapps\common\7 Days To Die\Mods\CompanionBot\Config&quot;" />
-    <Exec Command="copy /Y &quot;$(ProjectDir)ModInfo.xml&quot; &quot;F:\SteamLibrary\steamapps\common\7 Days To Die\Mods\CompanionBot\ModInfo.xml&quot;" />
+    <Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;$(GamePath)\Mods\CompanionBot\$(TargetFileName)&quot;" />
+    <Exec Command="xcopy /E /I /Y &quot;$(ProjectDir)Config&quot; &quot;$(GamePath)\Mods\CompanionBot\Config&quot;" />
+    <Exec Command="copy /Y &quot;$(ProjectDir)ModInfo.xml&quot; &quot;$(GamePath)\Mods\CompanionBot\ModInfo.xml&quot;" />
   </Target>
 
 </Project>

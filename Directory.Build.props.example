@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Скопируй этот файл в Directory.Build.props и укажи свой путь до игры.
+  Directory.Build.props добавлен в .gitignore и не коммитится.
+-->
+<Project>
+  <PropertyGroup>
+    <GamePath>ПУТЬ_ДО_ИГРЫ\7 Days To Die</GamePath>
+  </PropertyGroup>
+</Project>

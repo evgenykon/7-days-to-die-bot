@@ -8,6 +8,22 @@
 - .NET Framework 4.8 SDK
 - Отключённый EAC (Easy Anti-Cheat)
 
+## Настройка пути до игры
+
+Путь до игры задаётся в файле `Directory.Build.props` в корне репозитория (`ai-7d2d/`).
+
+1. Скопируйте шаблон:
+   ```
+   copy Directory.Build.props.example Directory.Build.props
+   ```
+
+2. Откройте `Directory.Build.props` и укажите свой путь:
+   ```xml
+   <GamePath>D:\Games\7 Days To Die</GamePath>
+   ```
+
+Файл `Directory.Build.props` добавлен в `.gitignore` и не коммитится — каждый разработчик указывает свой путь.
+
 ## Установка
 
 1. Запустите `build.bat` для сборки и установки мода
