@@ -88,14 +88,14 @@ Companion communicates with player via local LLM (LM Studio). Supportive, respec
 
 ## Phase 3: Combat Improvements (COMPLETE)
 
-- [x] Ranged attack AI (proper gun usage, aiming, reloading)
 - [x] Target priority system (closest threat, strongest threat, player's target)
 - [x] Retreat behavior when low HP
 - [x] Area-of-effect awareness (don't shoot through player)
 - [x] Kill tracking / statistics
-- [ ] Melee attack combos and stagger
-- [ ] Dodge/strafe behavior during combat
-- [ ] Companion damage feedback (visual + sound)
+- [x] Ranged attack AI (ammo checking, reload detection)
+- [x] Melee attack combos and stagger
+- [x] Dodge/strafe behavior during combat
+- [x] Companion damage feedback (logging + stats tracking)
 
 ## Phase 4: Inventory & Equipment
 

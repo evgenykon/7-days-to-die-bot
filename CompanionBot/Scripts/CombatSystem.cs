@@ -13,6 +13,9 @@ namespace CompanionBot
         public float TotalDamageTaken { get; set; }
         public int RetreatCount { get; set; }
         public int FriendlyFireAvoided { get; set; }
+        public int ComboHits { get; set; }
+        public int DodgesPerformed { get; set; }
+        public int StaggerApplied { get; set; }
         public DateTime LastKillTime { get; set; }
     }
 
@@ -22,9 +25,16 @@ namespace CompanionBot
         private const float RetreatDistance = 8f;
         private const float SafeDistance = 12f;
         private const float AttackRange = 25f;
+        private const float MeleeRange = 3f;
+        private const float DodgeDistance = 4f;
+        private const float ComboWindow = 1.5f;
 
         private static Dictionary<int, CombatStats> _stats = new Dictionary<int, CombatStats>();
         private static Dictionary<int, float> _retreatTimers = new Dictionary<int, float>();
+        private static Dictionary<int, float> _lastAttackTime = new Dictionary<int, float>();
+        private static Dictionary<int, int> _comboCount = new Dictionary<int, int>();
+        private static Dictionary<int, float> _lastDodgeTime = new Dictionary<int, float>();
+        private static Dictionary<int, Vector3> _dodgeDirection = new Dictionary<int, Vector3>();
 
         public static CombatStats GetStats(int entityId)
         {
@@ -84,6 +94,30 @@ namespace CompanionBot
                 InitializeStats(entityId);
 
             _stats[entityId].FriendlyFireAvoided++;
+        }
+
+        public static void RecordComboHit(int entityId)
+        {
+            if (!_stats.ContainsKey(entityId))
+                InitializeStats(entityId);
+
+            _stats[entityId].ComboHits++;
+        }
+
+        public static void RecordDodge(int entityId)
+        {
+            if (!_stats.ContainsKey(entityId))
+                InitializeStats(entityId);
+
+            _stats[entityId].DodgesPerformed++;
+        }
+
+        public static void RecordStagger(int entityId)
+        {
+            if (!_stats.ContainsKey(entityId))
+                InitializeStats(entityId);
+
+            _stats[entityId].StaggerApplied++;
         }
 
         public static EntityAlive FindBestTarget(EntityAlive companion, EntityPlayer owner, List<EntityAlive> enemies)
@@ -222,6 +256,168 @@ namespace CompanionBot
                 _stats.Remove(entityId);
             if (_retreatTimers.ContainsKey(entityId))
                 _retreatTimers.Remove(entityId);
+            if (_lastAttackTime.ContainsKey(entityId))
+                _lastAttackTime.Remove(entityId);
+            if (_comboCount.ContainsKey(entityId))
+                _comboCount.Remove(entityId);
+            if (_lastDodgeTime.ContainsKey(entityId))
+                _lastDodgeTime.Remove(entityId);
+            if (_dodgeDirection.ContainsKey(entityId))
+                _dodgeDirection.Remove(entityId);
+        }
+
+        public static bool HasAmmo(EntityAlive companion)
+        {
+            if (companion?.inventory == null)
+                return false;
+
+            var heldItem = companion.inventory.holdingItem;
+            if (heldItem == null || !heldItem.IsRanged)
+                return true;
+
+            var ammoItem = heldItem.GetAmmoType();
+            if (ammoItem == null)
+                return false;
+
+            return companion.inventory.GetItemCount(ammoItem.itemName) > 0;
+        }
+
+        public static bool ShouldReload(EntityAlive companion)
+        {
+            if (companion?.inventory == null)
+                return false;
+
+            var heldItem = companion.inventory.holdingItem;
+            if (heldItem == null || !heldItem.IsRanged)
+                return false;
+
+            var magazine = companion.inventory.GetHoldingItemMagazine();
+            return magazine == null || magazine.count == 0;
+        }
+
+        public static bool IsMeleeWeapon(EntityAlive companion)
+        {
+            if (companion?.inventory == null)
+                return true;
+
+            var heldItem = companion.inventory.holdingItem;
+            return heldItem == null || !heldItem.IsRanged;
+        }
+
+        public static bool CanPerformCombo(int entityId)
+        {
+            if (!_lastAttackTime.ContainsKey(entityId))
+                return false;
+
+            float timeSinceLastAttack = Time.time - _lastAttackTime[entityId];
+            return timeSinceLastAttack < ComboWindow;
+        }
+
+        public static void RecordAttack(int entityId)
+        {
+            if (!CanPerformCombo(entityId))
+            {
+                _comboCount[entityId] = 1;
+            }
+            else
+            {
+                if (!_comboCount.ContainsKey(entityId))
+                    _comboCount[entityId] = 0;
+                _comboCount[entityId]++;
+                RecordComboHit(entityId);
+            }
+
+            _lastAttackTime[entityId] = Time.time;
+        }
+
+        public static int GetComboCount(int entityId)
+        {
+            return _comboCount.ContainsKey(entityId) ? _comboCount[entityId] : 0;
+        }
+
+        public static bool ShouldApplyStagger(int entityId)
+        {
+            int combo = GetComboCount(entityId);
+            if (combo >= 3)
+            {
+                RecordStagger(entityId);
+                _comboCount[entityId] = 0;
+                return true;
+            }
+            return false;
+        }
+
+        public static bool ShouldDodge(int entityId, EntityAlive companion, EntityAlive threat)
+        {
+            if (threat == null || threat.IsDead())
+                return false;
+
+            if (_lastDodgeTime.ContainsKey(entityId))
+            {
+                if (Time.time - _lastDodgeTime[entityId] < 2f)
+                    return false;
+            }
+
+            float distance = Vector3.Distance(companion.position, threat.position);
+            if (distance > MeleeRange + 2f)
+                return false;
+
+            if (threat.attackingEntity == companion)
+                return true;
+
+            return false;
+        }
+
+        public static Vector3 CalculateDodgeDirection(int entityId, EntityAlive companion, EntityAlive threat)
+        {
+            Vector3 awayFromThreat = (companion.position - threat.position).normalized;
+            Vector3 strafeLeft = Vector3.Cross(awayFromThreat, Vector3.up).normalized;
+            Vector3 strafeRight = -strafeLeft;
+
+            bool dodgeLeft = UnityEngine.Random.value > 0.5f;
+            Vector3 dodgeDir = dodgeLeft ? strafeLeft : strafeRight;
+
+            _dodgeDirection[entityId] = dodgeDir;
+            _lastDodgeTime[entityId] = Time.time;
+            RecordDodge(entityId);
+
+            return dodgeDir;
+        }
+
+        public static void PlayDamageFeedback(EntityAlive companion, float damageAmount)
+        {
+            if (companion == null)
+                return;
+
+            if (damageAmount > 20f)
+            {
+                Log.Out($"[CompanionBot] Companion {companion.entityId} took heavy damage: {damageAmount:F0}");
+            }
+
+            float healthPercent = companion.Health / (float)companion.GetMaxHealth();
+            if (healthPercent < 0.5f && healthPercent > 0.3f)
+            {
+                Log.Out($"[CompanionBot] Companion {companion.entityId} health warning: {healthPercent * 100:F0}%");
+            }
+        }
+
+        public static void PlayAttackFeedback(EntityAlive companion, EntityAlive target, float damageDealt)
+        {
+            if (companion == null || target == null)
+                return;
+
+            int entityId = companion.entityId;
+            int combo = GetComboCount(entityId);
+
+            if (combo >= 3)
+            {
+                Log.Out($"[CompanionBot] Companion {entityId} performed {combo}-hit combo!");
+            }
+
+            if (damageDealt > 50f)
+            {
+                Log.Out($"[CompanionBot] Companion {entityId} dealt critical damage: {damageDealt:F0}");
+            }
         }
     }
 }

@@ -417,6 +417,9 @@ namespace CompanionBot
             Output(_senderInfo, $"Damage Taken: {stats.TotalDamageTaken:F0}");
             Output(_senderInfo, $"Retreats: {stats.RetreatCount}");
             Output(_senderInfo, $"Friendly Fire Avoided: {stats.FriendlyFireAvoided}");
+            Output(_senderInfo, $"Combo Hits: {stats.ComboHits}");
+            Output(_senderInfo, $"Dodges: {stats.DodgesPerformed}");
+            Output(_senderInfo, $"Staggers Applied: {stats.StaggerApplied}");
         }
 
         private EntityPlayer GetPlayer(CommandSenderInfo _senderInfo)
