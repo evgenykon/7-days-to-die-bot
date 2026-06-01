@@ -400,7 +400,7 @@ namespace CompanionBot
 
                 Vector3 retreatPos = CombatSystem.CalculateRetreatPosition(companion, owner, target);
                 MoveTowards(companion, retreatPos);
-                companion.SetAttackTarget(null);
+                companion.SetAttackTarget(null, 0);
                 return;
             }
 
@@ -433,7 +433,7 @@ namespace CompanionBot
 
                 if (CombatSystem.IsLineOfFireClear(companion, target, owner))
                 {
-                    companion.SetAttackTarget(target);
+                    companion.SetAttackTarget(target, 0);
                     return;
                 }
                 else
@@ -442,12 +442,12 @@ namespace CompanionBot
                     Vector3 repositionDir = Vector3.Cross((target.position - companion.position).normalized, Vector3.up);
                     Vector3 repositionPos = companion.position + repositionDir * 3f;
                     MoveTowards(companion, repositionPos);
-                    companion.SetAttackTarget(null);
+                    companion.SetAttackTarget(null, 0);
                     return;
                 }
             }
 
-            companion.SetAttackTarget(null);
+            companion.SetAttackTarget(null, 0);
 
             switch (companionData.State)
             {
@@ -461,6 +461,37 @@ namespace CompanionBot
                 case CompanionState.Guard:
                     UpdateGuardState(companion, companionData);
                     break;
+            }
+        }
+
+        private static void UpdateFollowState(EntityAlive companion, EntityPlayer owner)
+        {
+            float distanceToOwner = Vector3.Distance(companion.position, owner.position);
+
+            if (distanceToOwner > MaxFollowDistance)
+            {
+                TeleportToOwner(companion, owner);
+            }
+            else if (distanceToOwner > FollowDistance)
+            {
+                GameApi.MoveTo(companion, owner.position);
+                GameApi.LookAt(companion, owner.position);
+            }
+        }
+
+        private static void UpdateGuardState(EntityAlive companion, CompanionData companionData)
+        {
+            float distanceToGuardPos = Vector3.Distance(companion.position, companionData.GuardPosition);
+
+            if (distanceToGuardPos > companionData.GuardRadius)
+            {
+                GameApi.MoveTo(companion, companionData.GuardPosition);
+                GameApi.LookAt(companion, companionData.GuardPosition);
+            }
+            else if (distanceToGuardPos > GuardReturnDistance)
+            {
+                GameApi.MoveTo(companion, companionData.GuardPosition);
+                GameApi.LookAt(companion, companionData.GuardPosition);
             }
         }
 
@@ -487,12 +518,12 @@ namespace CompanionBot
                 if (distance > 5f)
                     continue;
 
-                if (CombatSystem.ShouldDodge(entityId, companion, entity))
+                if (CombatSystem.ShouldDodge(entityId, companion, entity as EntityAlive))
                 {
-                    Vector3 dodgeDir = CombatSystem.CalculateDodgeDirection(entityId, companion, entity);
+                    Vector3 dodgeDir = (Vector3)CombatSystem.CalculateRetreatPosition(companion, owner, entity as EntityAlive);
                     Vector3 dodgePos = companion.position + dodgeDir * 4f;
                     MoveTowards(companion, dodgePos);
-                    Log.Out($"[CompanionBot] Companion {entityId} dodged attack from {entity.EntityName}");
+                    Log.Out($"[CompanionBot] Companion {entityId} dodged attack from {GameApi.GetEntityName(entity)}");
                     return;
                 }
             }
@@ -510,34 +541,6 @@ namespace CompanionBot
             }
         }
 
-        private static void UpdateFollowState(EntityAlive companion, EntityPlayer owner)
-        {
-            float distanceToOwner = Vector3.Distance(companion.position, owner.position);
-
-            if (distanceToOwner > MaxFollowDistance)
-            {
-                TeleportToOwner(companion, owner);
-            }
-            else if (distanceToOwner > FollowDistance)
-            {
-                MoveTowards(companion, owner.position);
-            }
-        }
-
-        private static void UpdateGuardState(EntityAlive companion, CompanionData companionData)
-        {
-            float distanceToGuardPos = Vector3.Distance(companion.position, companionData.GuardPosition);
-
-            if (distanceToGuardPos > companionData.GuardRadius)
-            {
-                MoveTowards(companion, companionData.GuardPosition);
-            }
-            else if (distanceToGuardPos > GuardReturnDistance)
-            {
-                MoveTowards(companion, companionData.GuardPosition);
-            }
-        }
-
         private static List<EntityAlive> FindAllEnemies(EntityAlive companion, EntityPlayer owner)
         {
             var enemies = new List<EntityAlive>();
@@ -545,8 +548,8 @@ namespace CompanionBot
             if (GameManager.Instance?.World?.Entities?.list == null)
                 return enemies;
 
-            List<EntityAlive> entities = GameManager.Instance.World.Entities.list;
-            foreach (EntityAlive entity in entities)
+            List<Entity> entities = GameManager.Instance.World.Entities.list;
+            foreach (Entity entity in entities)
             {
                 if (entity == null || entity.IsDead())
                     continue;
@@ -569,7 +572,7 @@ namespace CompanionBot
                 float distance = Vector3.Distance(companion.position, entity.position);
                 if (distance <= AttackRange)
                 {
-                    enemies.Add(entity);
+                    enemies.Add(entity as EntityAlive);
                 }
             }
 
@@ -578,9 +581,8 @@ namespace CompanionBot
 
         private static void MoveTowards(EntityAlive companion, Vector3 targetPosition)
         {
-            Vector3 direction = (targetPosition - companion.position).normalized;
-            companion.Move(direction * companion.MoveSpeed);
-            companion.RotateToTarget(targetPosition);
+            GameApi.MoveTo(companion, targetPosition);
+            GameApi.LookAt(companion, targetPosition);
         }
 
         private static void TeleportToOwner(EntityAlive companion, EntityPlayer owner)

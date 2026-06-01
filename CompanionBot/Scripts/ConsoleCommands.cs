@@ -6,12 +6,12 @@ namespace CompanionBot
 {
     public class ConsoleCmdCB : ConsoleCmdAbstract
     {
-        public override string[] GetCommands()
+        public override string[] getCommands()
         {
             return new string[] { "cb" };
         }
 
-        public override string GetDescription()
+        public override string getDescription()
         {
             return "CompanionBot commands: cb spawn/follow/stay/guard/dismiss/status";
         }
@@ -242,7 +242,8 @@ Advanced Features (Phase 10):
             try
             {
                 var spawnPos = player.position + new Vector3(2, 0, 2);
-                int entityId = EntityFactory.CreateEntity(entityType, spawnPos);
+                var entity = EntityFactory.CreateEntity(entityType.GetHashCode(), spawnPos);
+                int entityId = entity != null ? entity.entityId : -1;
 
                 if (entityId > 0)
                 {
@@ -343,7 +344,7 @@ Advanced Features (Phase 10):
             try
             {
                 int entityId = companion.Entity.entityId;
-                GameManager.Instance.World.RemoveEntity(entityId, EnumRemoveEntity.Kill);
+                GameManager.Instance.World.RemoveEntity(entityId, (EnumRemoveEntityReason)2);
                 CompanionManager.UnregisterCompanion(entityId);
                 Output(_senderInfo, "Companion dismissed");
 
@@ -422,7 +423,8 @@ Advanced Features (Phase 10):
 
             foreach (var itemName in healingItems)
             {
-                if (inventory.GetItemCount(itemName) > 0)
+                var itemValue = ItemClass.GetItem(itemName);
+                if (itemValue != null && inventory.GetItemCount(itemValue) > 0)
                 {
                     foundItem = itemName;
                     break;
@@ -437,7 +439,8 @@ Advanced Features (Phase 10):
 
             try
             {
-                inventory.DecItem(itemName: foundItem, count: 1);
+                var itemValue = ItemClass.GetItem(foundItem);
+                inventory.DecItem(itemValue, 1);
 
                 int healAmount = foundItem == "medicalFirstAidKit" ? 100 : 50;
                 entity.Health = Math.Min(entity.Health + healAmount, entity.GetMaxHealth());
@@ -482,7 +485,8 @@ Advanced Features (Phase 10):
                 return;
             }
 
-            if (inventory.GetItemCount(itemName) <= 0)
+            var itemValue = ItemClass.GetItem(itemName);
+            if (itemValue == null || inventory.GetItemCount(itemValue) <= 0)
             {
                 Output(_senderInfo, $"Item '{itemName}' not found in inventory");
                 return;
@@ -490,7 +494,7 @@ Advanced Features (Phase 10):
 
             try
             {
-                inventory.DecItem(itemName: itemName, count: 1);
+                inventory.DecItem(itemValue, 1);
 
                 int entityId = companion.Entity.entityId;
                 EquipmentSlot? slot = DetermineEquipmentSlot(itemName);
@@ -503,7 +507,7 @@ Advanced Features (Phase 10):
                     }
                     else
                     {
-                        inventory.AddItem(itemName, 1);
+                        inventory.AddItem(new ItemStack(itemValue, 1), out _);
                         Output(_senderInfo, $"Failed to equip {itemName}");
                         return;
                     }
@@ -516,7 +520,7 @@ Advanced Features (Phase 10):
                     }
                     else
                     {
-                        inventory.AddItem(itemName, 1);
+                        inventory.AddItem(new ItemStack(itemValue, 1), out _);
                         Output(_senderInfo, $"Companion inventory full, returned {itemName}");
                         return;
                     }
@@ -1102,27 +1106,14 @@ Advanced Features (Phase 10):
         {
             if (_senderInfo.RemoteClientInfo != null)
             {
-                return _senderInfo.RemoteClientInfo.entityPlayerLocal;
+                return GameManager.Instance.World.GetPrimaryPlayer();
             }
             return GameManager.Instance.World.GetPrimaryPlayer();
         }
 
         private void Output(CommandSenderInfo _senderInfo, string message)
         {
-            if (_senderInfo.RemoteClientInfo != null)
-            {
-                _senderInfo.RemoteClientInfo.SendPackage(new NetPackageChat(
-                    EnumChatClients.FromServer,
-                    -1,
-                    _senderInfo.RemoteClientInfo.entityId,
-                    message,
-                    false
-                ));
-            }
-            else
-            {
-                SdtdConsole.Instance.Output(message);
-            }
+            SdtdConsole.Instance.Output(message);
         }
 
         private void OutputHelp(CommandSenderInfo _senderInfo)

@@ -158,9 +158,8 @@ namespace CompanionBot
 
             if (distance > FollowDistance)
             {
-                var direction = (targetPos - drone.position).normalized;
-                drone.Move(direction * drone.MoveSpeed);
-                drone.RotateToTarget(owner.position);
+                GameApi.MoveTo(drone, targetPos);
+                GameApi.LookAt(drone, owner.position);
             }
         }
 
@@ -171,8 +170,7 @@ namespace CompanionBot
 
             if (distance > data.PatrolRadius)
             {
-                var direction = (patrolPos - drone.position).normalized;
-                drone.Move(direction * drone.MoveSpeed);
+                GameApi.MoveTo(drone, patrolPos);
             }
             else
             {
@@ -182,20 +180,18 @@ namespace CompanionBot
                     UnityEngine.Random.Range(-data.PatrolRadius, data.PatrolRadius)
                 );
                 var targetPos = data.PatrolCenter + randomOffset + new Vector3(0, data.Altitude, 0);
-                var direction = (targetPos - drone.position).normalized;
-                drone.Move(direction * drone.MoveSpeed * 0.5f);
+                GameApi.MoveTo(drone, targetPos, GameApi.DefaultMoveSpeed * 0.5f);
             }
         }
 
         private static void UpdateScoutMode(EntityAlive drone, DroneCompanionData data, EntityPlayer owner)
         {
             var scoutPos = owner.position + new Vector3(0, data.Altitude * 2, 0);
-            var direction = (scoutPos - drone.position).normalized;
-            drone.Move(direction * drone.MoveSpeed);
+            GameApi.MoveTo(drone, scoutPos);
 
             if (Vector3.Distance(drone.position, scoutPos) < 5f)
             {
-                drone.RotateToTarget(owner.position + new Vector3(50, 0, 0));
+                GameApi.LookAt(drone, owner.position + new Vector3(50, 0, 0));
             }
         }
 
@@ -205,14 +201,13 @@ namespace CompanionBot
 
             if (target != null)
             {
-                drone.SetAttackTarget(target);
+                drone.SetAttackTarget(target, 0);
                 var attackPos = target.position + new Vector3(0, data.Altitude, 0);
-                var direction = (attackPos - drone.position).normalized;
-                drone.Move(direction * drone.MoveSpeed);
+                GameApi.MoveTo(drone, attackPos);
             }
             else
             {
-                drone.SetAttackTarget(null);
+                drone.SetAttackTarget(null, 0);
                 UpdateFollowMode(drone, data, owner);
             }
         }
@@ -224,8 +219,7 @@ namespace CompanionBot
 
             if (distance > 3f)
             {
-                var direction = (supportPos - drone.position).normalized;
-                drone.Move(direction * drone.MoveSpeed);
+                GameApi.MoveTo(drone, supportPos);
             }
 
             if (owner.Health < owner.GetMaxHealth() * 0.5f)
@@ -283,7 +277,7 @@ namespace CompanionBot
                 if (distance < nearestDistance)
                 {
                     nearestDistance = distance;
-                    nearestEnemy = entity;
+                    nearestEnemy = entity as EntityAlive;
                 }
             }
 
@@ -308,7 +302,7 @@ namespace CompanionBot
                 float distance = Vector3.Distance(drone.position, entity.position);
                 if (distance <= range)
                 {
-                    enemies.Add(entity);
+                    enemies.Add(entity as EntityAlive);
                 }
             }
 

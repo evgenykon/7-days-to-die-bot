@@ -181,7 +181,7 @@ namespace CompanionBot
             if (GameManager.Instance == null)
                 return;
 
-            bool isDay = GameManager.Instance.IsDaytime();
+            bool isDay = GameApi.IsDay();
 
             if (isDay && data.Mode == AdvancedBehaviorMode.Follow)
             {
@@ -241,7 +241,8 @@ namespace CompanionBot
             }
             else
             {
-                MoveTowards(companion, currentWaypoint.Position);
+                GameApi.MoveTo(companion, currentWaypoint.Position);
+                GameApi.LookAt(companion, currentWaypoint.Position);
             }
 
             CheckForEnemies(companion, owner, 25f);
@@ -253,7 +254,8 @@ namespace CompanionBot
 
             if (distanceToCenter > data.GuardRadius)
             {
-                MoveTowards(companion, data.GuardCenter);
+                GameApi.MoveTo(companion, data.GuardCenter);
+                GameApi.LookAt(companion, data.GuardCenter);
             }
             else
             {
@@ -267,7 +269,8 @@ namespace CompanionBot
 
             if (distanceToOwner > data.EscortDistance)
             {
-                MoveTowards(companion, owner.position);
+                GameApi.MoveTo(companion, owner.position);
+                GameApi.LookAt(companion, owner.position);
             }
             else
             {
@@ -297,7 +300,8 @@ namespace CompanionBot
 
             if (distanceToOrigin > data.ScoutRadius)
             {
-                MoveTowards(companion, data.ScoutOrigin);
+                GameApi.MoveTo(companion, data.ScoutOrigin);
+                GameApi.LookAt(companion, data.ScoutOrigin);
             }
             else
             {
@@ -322,7 +326,8 @@ namespace CompanionBot
 
             if (distanceToPosition > 5f)
             {
-                MoveTowards(companion, data.HordeDefensePosition);
+                GameApi.MoveTo(companion, data.HordeDefensePosition);
+                GameApi.LookAt(companion, data.HordeDefensePosition);
             }
             else
             {
@@ -339,7 +344,7 @@ namespace CompanionBot
                 var nearestEnemy = FindNearestEnemy(companion, enemies);
                 if (nearestEnemy != null)
                 {
-                    companion.SetAttackTarget(nearestEnemy);
+                    companion.SetAttackTarget(nearestEnemy, 0);
                 }
             }
         }
@@ -362,7 +367,7 @@ namespace CompanionBot
                 float distance = Vector3.Distance(companion.position, entity.position);
                 if (distance <= range)
                 {
-                    enemies.Add(entity);
+                    enemies.Add(GameApi.AsEntityAlive(entity));
                 }
             }
 
@@ -389,9 +394,8 @@ namespace CompanionBot
 
         private static void MoveTowards(EntityAlive companion, Vector3 targetPosition)
         {
-            Vector3 direction = (targetPosition - companion.position).normalized;
-            companion.Move(direction * companion.MoveSpeed);
-            companion.RotateToTarget(targetPosition);
+            GameApi.MoveTo(companion, targetPosition);
+            GameApi.LookAt(companion, targetPosition);
         }
 
         public static void RemoveBehaviorData(int entityId)

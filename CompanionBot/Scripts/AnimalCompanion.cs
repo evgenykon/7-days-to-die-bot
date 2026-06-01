@@ -121,11 +121,11 @@ namespace CompanionBot
 
             if (target != null && Vector3.Distance(animal.position, target.position) <= AttackRange)
             {
-                animal.SetAttackTarget(target);
+                animal.SetAttackTarget(target, 0);
                 return;
             }
 
-            animal.SetAttackTarget(null);
+            animal.SetAttackTarget(null, 0);
 
             if (distanceToOwner > MaxFollowDistance)
             {
@@ -135,9 +135,8 @@ namespace CompanionBot
             }
             else if (distanceToOwner > FollowDistance)
             {
-                var direction = (owner.position - animal.position).normalized;
-                animal.Move(direction * animal.MoveSpeed);
-                animal.RotateToTarget(owner.position);
+                GameApi.MoveTo(animal, owner.position);
+                GameApi.LookAt(animal, owner.position);
             }
         }
 
@@ -167,7 +166,7 @@ namespace CompanionBot
                 if (distance < nearestDistance)
                 {
                     nearestDistance = distance;
-                    nearestEnemy = entity;
+                    nearestEnemy = entity as EntityAlive;
                 }
             }
 

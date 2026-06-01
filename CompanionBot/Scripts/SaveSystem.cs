@@ -145,7 +145,9 @@ namespace CompanionBot
                     return;
                 }
 
-                int entityId = EntityFactory.CreateEntity(data.EntityType, data.Position);
+                var spawnedEntity = EntityFactory.CreateEntity(data.EntityType.GetHashCode(), data.Position);
+                int entityId = spawnedEntity != null ? spawnedEntity.entityId : -1;
+
                 if (entityId <= 0)
                 {
                     Log.Error($"[CompanionBot] Failed to spawn companion {data.EntityType}");

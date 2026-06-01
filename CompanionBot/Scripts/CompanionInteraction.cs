@@ -180,7 +180,7 @@ namespace CompanionBot
 
                 if (squadMate.Entity.GetAttackTarget() == null || squadMate.Entity.GetAttackTarget().IsDead())
                 {
-                    squadMate.Entity.SetAttackTarget(target);
+                    squadMate.Entity.SetAttackTarget(target, 0);
                     Log.Out($"[CompanionBot] Leader {coordinatorEntityId} coordinated attack on {target.EntityName}");
                 }
             }

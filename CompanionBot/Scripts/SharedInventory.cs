@@ -164,14 +164,14 @@ namespace CompanionBot
                 if (totalAmmo <= 0)
                     continue;
 
-                int ammoPerCompanion = totalAmmo / squad.MemberEntityIds.Count;
+                int ammoPerCompanion = (int)(totalAmmo / squad.MemberEntityIds.Count);
                 if (ammoPerCompanion <= 0)
                     continue;
 
                 foreach (int companionEntityId in squad.MemberEntityIds)
                 {
                     var companionInventory = InventorySystem.GetInventory(companionEntityId);
-                    if (companionInventory.HasSpace(ammoPerCompanion))
+                    if (companionInventory.HasSpace())
                     {
                         companionInventory.AddItem(ammoType, ammoPerCompanion);
                         inventory.RemoveItem(ammoType, ammoPerCompanion);
@@ -199,14 +199,14 @@ namespace CompanionBot
                 if (totalCount <= 0)
                     continue;
 
-                int itemsPerCompanion = totalCount / squad.MemberEntityIds.Count;
+                int itemsPerCompanion = (int)(totalCount / squad.MemberEntityIds.Count);
                 if (itemsPerCompanion <= 0)
                     continue;
 
                 foreach (int companionEntityId in squad.MemberEntityIds)
                 {
                     var companionInventory = InventorySystem.GetInventory(companionEntityId);
-                    if (companionInventory.HasSpace(itemsPerCompanion))
+                    if (companionInventory.HasSpace())
                     {
                         companionInventory.AddItem(item, itemsPerCompanion);
                         inventory.RemoveItem(item, itemsPerCompanion);

@@ -35,7 +35,7 @@ namespace CompanionBot
                 return;
 
             int currentDay = GameUtils.WorldTimeToDays(GameManager.Instance.World.worldTime);
-            bool isDay = GameManager.Instance.IsDaytime();
+            bool isDay = GameApi.IsDay();
 
             if (currentDay != _lastDayNumber)
             {
@@ -61,7 +61,7 @@ namespace CompanionBot
 
             int dayNumber = GameUtils.WorldTimeToDays(GameManager.Instance.World.worldTime);
             bool isBloodMoon = dayNumber % 7 == 0;
-            bool isNight = !GameManager.Instance.IsDaytime();
+            bool isNight = !GameApi.IsDay();
             bool isHordeNight = isBloodMoon && isNight;
 
             if (isHordeNight && !_wasHordeNight)
@@ -133,7 +133,7 @@ namespace CompanionBot
             if (__instance == null || _itemStack == null || ModMain.MemoryLog == null)
                 return;
 
-            string itemName = _itemStack.itemName;
+            string itemName = _itemStack.itemValue.ItemClass.GetItemName();
             int count = _itemStack.count;
 
             if (IsRareItem(itemName))
@@ -171,7 +171,7 @@ namespace CompanionBot
             if (_itemValue == null || ModMain.MemoryLog == null)
                 return;
 
-            string itemName = ItemClass.GetItem(_itemValue.type).itemName;
+            string itemName = _itemValue.ItemClass.GetItemName();
             ModMain.MemoryLog.LogCrafting(itemName, _count);
             _ = ModMain.Chat?.SendMessage("crafting", $"Скрафтил {itemName}!");
         }

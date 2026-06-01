@@ -240,6 +240,12 @@ namespace CompanionBot
             return result;
         }
 
+        public void Clear()
+        {
+            Items.Clear();
+            Equipment.Clear();
+        }
+
         public List<string> GetAllEquipment()
         {
             var result = new List<string>();

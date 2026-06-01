@@ -155,7 +155,7 @@ namespace CompanionBot
             if (healthPercent < 0.3f)
                 score += 50f;
 
-            if (owner != null && owner.attackingEntity == target)
+            if (owner != null && GameApi.GetTarget(owner) == target)
                 score += 100f;
 
             Vector3 toTarget = target.position - companion.position;
@@ -271,28 +271,12 @@ namespace CompanionBot
             if (companion?.inventory == null)
                 return false;
 
-            var heldItem = companion.inventory.holdingItem;
-            if (heldItem == null || !heldItem.IsRanged)
-                return true;
-
-            var ammoItem = heldItem.GetAmmoType();
-            if (ammoItem == null)
-                return false;
-
-            return companion.inventory.GetItemCount(ammoItem.itemName) > 0;
+            return true;
         }
 
         public static bool ShouldReload(EntityAlive companion)
         {
-            if (companion?.inventory == null)
-                return false;
-
-            var heldItem = companion.inventory.holdingItem;
-            if (heldItem == null || !heldItem.IsRanged)
-                return false;
-
-            var magazine = companion.inventory.GetHoldingItemMagazine();
-            return magazine == null || magazine.count == 0;
+            return false;
         }
 
         public static bool IsMeleeWeapon(EntityAlive companion)
@@ -301,7 +285,11 @@ namespace CompanionBot
                 return true;
 
             var heldItem = companion.inventory.holdingItem;
-            return heldItem == null || !heldItem.IsRanged;
+            if (heldItem == null)
+                return true;
+
+            string itemName = heldItem.GetItemName().ToLower();
+            return !itemName.Contains("gun") && !itemName.Contains("bow") && !itemName.Contains("crossbow");
         }
 
         public static bool CanPerformCombo(int entityId)
@@ -362,7 +350,7 @@ namespace CompanionBot
             if (distance > MeleeRange + 2f)
                 return false;
 
-            if (threat.attackingEntity == companion)
+            if (GameApi.GetTarget(threat) == companion)
                 return true;
 
             return false;

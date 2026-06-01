@@ -193,9 +193,8 @@ namespace CompanionBot
 
         private static void MoveTowards(EntityAlive companion, Vector3 targetPosition)
         {
-            Vector3 direction = (targetPosition - companion.position).normalized;
-            companion.Move(direction * companion.MoveSpeed);
-            companion.RotateToTarget(targetPosition);
+            GameApi.MoveTo(companion, targetPosition);
+            GameApi.LookAt(companion, targetPosition);
         }
 
         public static void ExecuteSquadCommand(int ownerEntityId, Action<int> command)
@@ -245,7 +244,7 @@ namespace CompanionBot
                     var companionData = CompanionManager.GetCompanion(entityId);
                     if (companionData != null && companionData.Entity != null)
                     {
-                        companionData.Entity.SetAttackTarget(target);
+                        companionData.Entity.SetAttackTarget(target, 0);
                     }
                 });
                 Log.Out($"[CompanionBot] All squad members attacking target");

@@ -78,8 +78,7 @@ namespace CompanionBot
 
             if (distance > RepairRange)
             {
-                var direction = (taskPos - companion.position).normalized;
-                companion.Move(direction * companion.MoveSpeed);
+                GameApi.MoveTo(companion, taskPos);
                 return;
             }
 

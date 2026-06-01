@@ -10,7 +10,7 @@ if not exist "%PROPS_FILE%" (
     exit /b 1
 )
 
-for /f "tokens=2 delims=> <" %%a in ('findstr /i "GamePath" "%PROPS_FILE%"') do set "GAME_PATH=%%a"
+for /f "tokens=* usebackq" %%a in (`powershell -NoProfile -Command "([xml](Get-Content '%PROPS_FILE%')).Project.PropertyGroup.GamePath"`) do set "GAME_PATH=%%a"
 
 if "%GAME_PATH%"=="" (
     echo ERROR: GamePath not set in Directory.Build.props
