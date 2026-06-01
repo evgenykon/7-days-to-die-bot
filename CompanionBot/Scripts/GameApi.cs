@@ -58,27 +58,37 @@ namespace CompanionBot
 
             try
             {
-                // Use reflection to find the correct method to get entity class ID by name
-                var assembly = typeof(EntityFactory).Assembly;
+                // Use reflection to find the correct method
+                System.Reflection.Assembly assembly = typeof(EntityFactory).Assembly;
                 
-                // Try to find EntityClassList type
-                var entityClassListType = assembly.GetType("EntityClassList");
-                if (entityClassListType != null)
+                // Try to find EntityClass type and its methods
+                System.Type entityClassType = assembly.GetType("EntityClass");
+                if (entityClassType != null)
                 {
-                    // Try to get static instance or field
-                    var instanceField = entityClassListType.GetField("Instance", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
-                    if (instanceField != null)
+                    // Try different method names that might exist
+                    string[] methodNames = { 
+                        "GetEntityClassFromEntityClassName", 
+                        "GetEntityClassByName",
+                        "GetByName",
+                        "FindByName"
+                    };
+
+                    foreach (string methodName in methodNames)
                     {
-                        var instance = instanceField.GetValue(null);
-                        if (instance != null)
+                        System.Reflection.MethodInfo method = entityClassType.GetMethod(methodName, 
+                            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                        
+                        if (method != null && method.GetParameters().Length == 1 && 
+                            method.GetParameters()[0].ParameterType == typeof(string))
                         {
-                            // Try to find GetIdByName or similar method
-                            var getIdMethod = entityClassListType.GetMethod("GetIdByName", new[] { typeof(string) });
-                            if (getIdMethod != null)
+                            object result = method.Invoke(null, new object[] { className });
+                            if (result != null)
                             {
-                                int id = (int)getIdMethod.Invoke(instance, new object[] { className });
-                                if (id >= 0)
+                                // Try to get ID from result
+                                System.Reflection.PropertyInfo idProp = result.GetType().GetProperty("id");
+                                if (idProp != null)
                                 {
+                                    int id = (int)idProp.GetValue(result);
                                     return EntityFactory.CreateEntity(id, position);
                                 }
                             }
@@ -86,24 +96,17 @@ namespace CompanionBot
                     }
                 }
 
-                // Fallback: try to find entity class ID through EntityClass static methods
-                var entityClassType = typeof(EntityClass);
-                var getByNameMethod = entityClassType.GetMethod("GetByName", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public, null, new[] { typeof(string) }, null);
-                if (getByNameMethod != null)
+                // Fallback: try EntityFactory.CreateEntity with string directly
+                // Some versions might support this
+                System.Reflection.MethodInfo createMethod = typeof(EntityFactory).GetMethod("CreateEntity", 
+                    new[] { typeof(string), typeof(Vector3) });
+                
+                if (createMethod != null)
                 {
-                    var entityClass = getByNameMethod.Invoke(null, new object[] { className });
-                    if (entityClass != null)
-                    {
-                        var idProperty = entityClassType.GetProperty("id");
-                        if (idProperty != null)
-                        {
-                            int id = (int)idProperty.GetValue(entityClass);
-                            return EntityFactory.CreateEntity(id, position);
-                        }
-                    }
+                    return (Entity)createMethod.Invoke(null, new object[] { className, position });
                 }
 
-                Log.Error($"[CompanionBot] Could not find method to get entity class ID for: {className}");
+                Log.Error($"[CompanionBot] Could not find method to create entity: {className}");
                 return null;
             }
             catch (Exception ex)

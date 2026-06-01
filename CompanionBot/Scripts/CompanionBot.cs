@@ -170,24 +170,18 @@ namespace CompanionBot
     [HarmonyPatch(typeof(EntityAlive), "DamageEntity")]
     public class DamageEntityPatch
     {
-        static void Postfix(EntityAlive __instance, DamageSource _damageSource, EntityAlive _attackingEntity, float _damage, bool _critical)
+        static void Postfix(EntityAlive __instance, DamageSource _damageSource, int _strength, bool _criticalHit, float _impulseScale, int __result)
         {
             if (__instance == null)
                 return;
 
+            float damage = _strength;
+
             var companionData = CompanionManager.GetCompanion(__instance.entityId);
             if (companionData != null)
             {
-                CombatSystem.RecordDamageTaken(__instance.entityId, _damage);
-                CombatSystem.PlayDamageFeedback(__instance, _damage);
-            }
-
-            if (_attackingEntity != null && CompanionManager.GetCompanion(_attackingEntity.entityId) != null)
-            {
-                CombatSystem.RecordDamageDealt(_attackingEntity.entityId, _damage);
-                CombatSystem.PlayAttackFeedback(_attackingEntity, __instance, _damage);
-
-                InventorySystem.ApplyDurabilityDamage(_attackingEntity.entityId, EquipmentSlot.Weapon, _damage * 0.1f);
+                CombatSystem.RecordDamageTaken(__instance.entityId, damage);
+                CombatSystem.PlayDamageFeedback(__instance, damage);
             }
         }
     }
