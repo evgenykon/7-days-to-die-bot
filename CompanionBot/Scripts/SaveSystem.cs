@@ -17,6 +17,7 @@ namespace CompanionBot
         public float GuardRadius { get; set; }
         public string EntityType { get; set; }
         public DateTime SpawnTime { get; set; }
+        public CompanionInventory Inventory { get; set; }
     }
 
     public class SaveData
@@ -61,6 +62,7 @@ namespace CompanionBot
                         continue;
 
                     var entityTypeName = GetEntityTypeName(companion.Entity);
+                    var inventory = InventorySystem.GetInventory(companion.Entity.entityId);
 
                     var data = new CompanionSaveData
                     {
@@ -72,7 +74,8 @@ namespace CompanionBot
                         GuardPosition = companion.GuardPosition,
                         GuardRadius = companion.GuardRadius,
                         EntityType = entityTypeName,
-                        SpawnTime = companion.SpawnTime
+                        SpawnTime = companion.SpawnTime,
+                        Inventory = inventory
                     };
 
                     saveData.Companions.Add(data);
@@ -165,6 +168,12 @@ namespace CompanionBot
                     companionData.GuardPosition = data.GuardPosition;
                     companionData.GuardRadius = data.GuardRadius;
                     companionData.SpawnTime = data.SpawnTime;
+                }
+
+                if (data.Inventory != null)
+                {
+                    InventorySystem.LoadInventory(entityId, data.Inventory);
+                    Log.Out($"[CompanionBot] Loaded inventory for companion {entityId}");
                 }
 
                 Log.Out($"[CompanionBot] Restored companion {entityId} ({data.EntityType}) for player {owner.EntityName}");

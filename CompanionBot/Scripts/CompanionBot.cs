@@ -200,6 +200,103 @@ namespace CompanionBot
             {
                 CombatSystem.RecordDamageDealt(_attackingEntity.entityId, _damage);
                 CombatSystem.PlayAttackFeedback(_attackingEntity, __instance, _damage);
+
+                InventorySystem.ApplyDurabilityDamage(_attackingEntity.entityId, EquipmentSlot.Weapon, _damage * 0.1f);
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(EntityAlive), "FireWeapon")]
+    public class FireWeaponPatch
+    {
+        static void Postfix(EntityAlive __instance)
+        {
+            if (__instance == null)
+                return;
+
+            var companionData = CompanionManager.GetCompanion(__instance.entityId);
+            if (companionData == null)
+                return;
+
+            var weapon = InventorySystem.GetInventory(__instance.entityId).GetEquippedItem(EquipmentSlot.Weapon);
+            if (weapon != null)
+            {
+                string ammoType = GetAmmoTypeForWeapon(weapon.ItemName);
+                if (!string.IsNullOrEmpty(ammoType))
+                {
+                    InventorySystem.UseAmmo(__instance.entityId, ammoType, 1);
+                }
+
+                InventorySystem.ApplyDurabilityDamage(__instance.entityId, EquipmentSlot.Weapon, 0.5f);
+            }
+        }
+
+        private static string GetAmmoTypeForWeapon(string weaponName)
+        {
+            weaponName = weaponName.ToLower();
+
+            if (weaponName.Contains("ak47") || weaponName.Contains("rifle"))
+                return "ammo762mmBulletBall";
+            if (weaponName.Contains("pistol") || weaponName.Contains("9mm"))
+                return "ammo9mmBulletBall";
+            if (weaponName.Contains("shotgun"))
+                return "ammoShotgunShell";
+            if (weaponName.Contains("sniper") || weaponName.Contains("hunting"))
+                return "ammo762mmBulletBall";
+            if (weaponName.Contains("smg") || weaponName.Contains("mp5"))
+                return "ammo9mmBulletBall";
+
+            return null;
+        }
+    }
+
+    [HarmonyPatch(typeof(EntityAlive), "OnEntityDeath")]
+    public class LootPickupPatch
+    {
+        static void Postfix(EntityAlive __instance)
+        {
+            if (__instance == null)
+                return;
+
+            if (!(__instance is EntityZombie) && !(__instance is EntityEnemyAnimal))
+                return;
+
+            var companions = CompanionManager.GetAllCompanions();
+            foreach (var companion in companions)
+            {
+                if (companion.Entity == null || companion.Entity.IsDead())
+                    continue;
+
+                float distance = Vector3.Distance(companion.Entity.position, __instance.position);
+                if (distance > 10f)
+                    continue;
+
+                if (!InventorySystem.IsAutoPickupEnabled(companion.Entity.entityId))
+                    continue;
+
+                TryPickupLoot(companion.Entity.entityId, __instance);
+            }
+        }
+
+        private static void TryPickupLoot(int companionEntityId, EntityAlive deadEntity)
+        {
+            var inventory = InventorySystem.GetInventory(companionEntityId);
+            if (!inventory.HasSpace())
+                return;
+
+            string[] commonLoot = { "ammo9mmBulletBall", "ammo762mmBulletBall", "ammoShotgunShell", "medicalBandage", "foodCanChili", "drinkJarBoiledWater" };
+
+            foreach (var item in commonLoot)
+            {
+                if (UnityEngine.Random.value < 0.3f)
+                {
+                    int count = UnityEngine.Random.Range(1, 5);
+                    if (inventory.AddItem(item, count))
+                    {
+                        Log.Out($"[CompanionBot] Companion {companionEntityId} picked up {count}x {item}");
+                        break;
+                    }
+                }
             }
         }
     }
@@ -364,6 +461,12 @@ namespace CompanionBot
             if (GameManager.Instance?.World?.Entities?.list == null)
                 return;
 
+            float healthPercent = companion.Health / (float)companion.GetMaxHealth();
+            if (healthPercent < 0.5f)
+            {
+                TryAutoHeal(companion, entityId);
+            }
+
             foreach (var entity in GameManager.Instance.World.Entities.list)
             {
                 if (entity == null || entity.IsDead())
@@ -384,6 +487,18 @@ namespace CompanionBot
                     Log.Out($"[CompanionBot] Companion {entityId} dodged attack from {entity.EntityName}");
                     return;
                 }
+            }
+        }
+
+        private static void TryAutoHeal(EntityAlive companion, int entityId)
+        {
+            string healingItem = InventorySystem.FindHealingItem(entityId);
+            if (healingItem != null)
+            {
+                int healAmount = healingItem.Contains("FirstAidKit") ? 100 : 50;
+                companion.Health = Math.Min(companion.Health + healAmount, companion.GetMaxHealth());
+                InventorySystem.UseHealingItem(entityId, healingItem);
+                Log.Out($"[CompanionBot] Companion {entityId} auto-healed with {healingItem} (+{healAmount} HP)");
             }
         }
 

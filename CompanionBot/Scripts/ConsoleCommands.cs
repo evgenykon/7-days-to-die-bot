@@ -27,6 +27,9 @@ namespace CompanionBot
   cb status           - Show companion status
   cb heal             - Use first aid kit on companion
   cb equip <item>     - Give weapon/item to companion
+  cb unequip <slot>   - Unequip item from slot (weapon/head/chest/legs/feet)
+  cb inventory        - Show companion inventory
+  cb autopickup [on/off] - Toggle auto loot pickup
   cb stats            - Show combat statistics";
         }
 
@@ -72,6 +75,15 @@ namespace CompanionBot
                     break;
                 case "equip":
                     HandleEquip(_params, _senderInfo, player);
+                    break;
+                case "unequip":
+                    HandleUnequip(_params, _senderInfo, player);
+                    break;
+                case "inventory":
+                    HandleInventory(_senderInfo, player);
+                    break;
+                case "autopickup":
+                    HandleAutoPickup(_params, _senderInfo, player);
                     break;
                 case "stats":
                     HandleStats(_senderInfo, player);
@@ -376,10 +388,35 @@ namespace CompanionBot
             {
                 inventory.DecItem(itemName: itemName, count: 1);
 
-                var entity = companion.Entity;
-                entity.inventory.SetItem(0, new ItemStack(ItemClass.GetItem(itemName), 1));
+                int entityId = companion.Entity.entityId;
+                EquipmentSlot? slot = DetermineEquipmentSlot(itemName);
 
-                Output(_senderInfo, $"Equipped companion with {itemName}");
+                if (slot.HasValue)
+                {
+                    if (InventorySystem.EquipItem(entityId, slot.Value, itemName))
+                    {
+                        Output(_senderInfo, $"Equipped companion with {itemName} in {slot.Value} slot");
+                    }
+                    else
+                    {
+                        inventory.AddItem(itemName, 1);
+                        Output(_senderInfo, $"Failed to equip {itemName}");
+                        return;
+                    }
+                }
+                else
+                {
+                    if (InventorySystem.AddItemToCompanion(entityId, itemName, 1))
+                    {
+                        Output(_senderInfo, $"Added {itemName} to companion inventory");
+                    }
+                    else
+                    {
+                        inventory.AddItem(itemName, 1);
+                        Output(_senderInfo, $"Companion inventory full, returned {itemName}");
+                        return;
+                    }
+                }
 
                 if (ModMain.Chat != null)
                 {
@@ -391,6 +428,28 @@ namespace CompanionBot
                 Output(_senderInfo, $"Error equipping companion: {ex.Message}");
                 Log.Error($"[CompanionBot] Equip error: {ex.Message}");
             }
+        }
+
+        private EquipmentSlot? DetermineEquipmentSlot(string itemName)
+        {
+            itemName = itemName.ToLower();
+
+            if (itemName.Contains("gun") || itemName.Contains("melee") || itemName.Contains("tool"))
+                return EquipmentSlot.Weapon;
+
+            if (itemName.Contains("helmet") || itemName.Contains("hat") || itemName.Contains("head"))
+                return EquipmentSlot.Head;
+
+            if (itemName.Contains("chest") || itemName.Contains("armor") || itemName.Contains("vest"))
+                return EquipmentSlot.Chest;
+
+            if (itemName.Contains("legs") || itemName.Contains("pants"))
+                return EquipmentSlot.Legs;
+
+            if (itemName.Contains("boots") || itemName.Contains("feet") || itemName.Contains("shoes"))
+                return EquipmentSlot.Feet;
+
+            return null;
         }
 
         private void HandleStats(CommandSenderInfo _senderInfo, EntityPlayer player)
@@ -420,6 +479,133 @@ namespace CompanionBot
             Output(_senderInfo, $"Combo Hits: {stats.ComboHits}");
             Output(_senderInfo, $"Dodges: {stats.DodgesPerformed}");
             Output(_senderInfo, $"Staggers Applied: {stats.StaggerApplied}");
+        }
+
+        private void HandleUnequip(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, "No active companion found");
+                return;
+            }
+
+            if (_params.Count < 2)
+            {
+                Output(_senderInfo, "Usage: cb unequip <slot>");
+                Output(_senderInfo, "Slots: weapon, head, chest, legs, feet");
+                return;
+            }
+
+            string slotName = _params[1].ToLower();
+            EquipmentSlot slot;
+
+            switch (slotName)
+            {
+                case "weapon":
+                    slot = EquipmentSlot.Weapon;
+                    break;
+                case "head":
+                    slot = EquipmentSlot.Head;
+                    break;
+                case "chest":
+                    slot = EquipmentSlot.Chest;
+                    break;
+                case "legs":
+                    slot = EquipmentSlot.Legs;
+                    break;
+                case "feet":
+                    slot = EquipmentSlot.Feet;
+                    break;
+                default:
+                    Output(_senderInfo, $"Unknown slot: {slotName}");
+                    Output(_senderInfo, "Valid slots: weapon, head, chest, legs, feet");
+                    return;
+            }
+
+            int entityId = companion.Entity.entityId;
+            if (InventorySystem.UnequipItem(entityId, slot))
+            {
+                Output(_senderInfo, $"Unequipped item from {slotName} slot");
+            }
+            else
+            {
+                Output(_senderInfo, $"Failed to unequip from {slotName} slot (empty or inventory full)");
+            }
+        }
+
+        private void HandleInventory(CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, "No active companion found");
+                return;
+            }
+
+            int entityId = companion.Entity.entityId;
+            var inventory = InventorySystem.GetInventory(entityId);
+
+            Output(_senderInfo, "=== Companion Inventory ===");
+            Output(_senderInfo, $"Capacity: {inventory.GetTotalItemCount()}/{inventory.MaxCapacity}");
+            Output(_senderInfo, $"Auto-pickup: {(inventory.AutoPickupEnabled ? "ON" : "OFF")}");
+            Output(_senderInfo, "");
+
+            var equipment = inventory.GetAllEquipment();
+            if (equipment.Count > 0)
+            {
+                Output(_senderInfo, "--- Equipment ---");
+                foreach (var item in equipment)
+                {
+                    Output(_senderInfo, item);
+                }
+                Output(_senderInfo, "");
+            }
+
+            var items = inventory.GetAllItems();
+            if (items.Count > 0)
+            {
+                Output(_senderInfo, "--- Items ---");
+                foreach (var item in items)
+                {
+                    Output(_senderInfo, item);
+                }
+            }
+            else
+            {
+                Output(_senderInfo, "Inventory is empty");
+            }
+        }
+
+        private void HandleAutoPickup(List<string> _params, CommandSenderInfo _senderInfo, EntityPlayer player)
+        {
+            var companion = CompanionManager.GetCompanionByOwner(player);
+            if (companion == null || companion.Entity.IsDead())
+            {
+                Output(_senderInfo, "No active companion found");
+                return;
+            }
+
+            int entityId = companion.Entity.entityId;
+
+            if (_params.Count < 2)
+            {
+                bool currentState = InventorySystem.IsAutoPickupEnabled(entityId);
+                Output(_senderInfo, $"Auto-pickup is currently {(currentState ? "ON" : "OFF")}");
+                Output(_senderInfo, "Usage: cb autopickup [on/off]");
+                return;
+            }
+
+            string setting = _params[1].ToLower();
+            bool enable = setting == "on" || setting == "true" || setting == "1";
+
+            InventorySystem.SetAutoPickup(entityId, enable);
+            Output(_senderInfo, $"Auto-pickup {(enable ? "enabled" : "disabled")}");
+
+            if (ModMain.Chat != null)
+            {
+                _ = ModMain.Chat.SendMessage("autopickup", enable ? "Компаньон будет подбирать лут" : "Компаньон перестал подбирать лут");
+            }
         }
 
         private EntityPlayer GetPlayer(CommandSenderInfo _senderInfo)

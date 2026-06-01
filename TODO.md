@@ -97,15 +97,15 @@ Companion communicates with player via local LLM (LM Studio). Supportive, respec
 - [x] Dodge/strafe behavior during combat
 - [x] Companion damage feedback (logging + stats tracking)
 
-## Phase 4: Inventory & Equipment
+## Phase 4: Inventory & Equipment (COMPLETE)
 
-- [ ] Companion inventory (backpack)
-- [ ] Equip/unequip weapons via UI or commands
-- [ ] Armor slots (head, chest, legs, feet)
-- [ ] Ammo management (consume ammo from inventory)
-- [ ] Auto-use healing items when injured
-- [ ] Loot pickup (optional, configurable)
-- [ ] Item durability tracking
+- [x] Companion inventory (backpack)
+- [x] Equip/unequip weapons via UI or commands
+- [x] Armor slots (head, chest, legs, feet)
+- [x] Ammo management (consume ammo from inventory)
+- [x] Auto-use healing items when injured
+- [x] Loot pickup (optional, configurable)
+- [x] Item durability tracking
 
 ## Phase 5: Advanced AI Behaviors
 

@@ -50,6 +50,7 @@ namespace CompanionBot
             {
                 _companions.Remove(entityId);
                 CombatSystem.CleanupStats(entityId);
+                InventorySystem.RemoveInventory(entityId);
                 Log.Out($"[CompanionBot] Unregistered companion: {entityId}");
             }
         }
