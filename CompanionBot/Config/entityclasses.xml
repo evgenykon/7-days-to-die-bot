@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configs>
+	<append xpath="/entity_classes">
+
+<entity_class name="companionBot">
+	<property name="Class" value="EntityNPC"/>
+	<property name="UserSpawnType" value="Console"/>
+	<property name="Tags" value="entity,npc,human,companion"/>
+	<property name="EntityType" value="Player"/>
+	<property name="Faction" value="whiteriver"/>
+	<property name="Mesh" value="Player/Male/player_maleRagdoll"/>
+	<property name="AvatarController" value="AvatarNpcController"/>
+	<property name="ModelType" value="Npc"/>
+	<property name="HasRagdoll" value="true"/>
+	<property name="Prefab" value="NPC"/>
+	<property name="Parent" value="Players"/>
+	<property name="PhysicsBody" value="Player"/>
+	<property name="Weight" value="70"/>
+	<property name="LookAtAngle" value="60"/>
+	<property name="IsEnemyEntity" value="false"/>
+	<property name="WalkType" value="7"/>
+	<property name="SurfaceCategory" value="organic"/>
+	<property name="ParticleOnDeath" value="blood_death"/>
+	<property name="HasDeathAnim" value="true"/>
+	<property name="SoundRandomTime" value="200"/>
+	<property name="SoundHurt" value="player1painlg"/>
+	<property name="SoundHurtSmall" value="player1painsm"/>
+	<property name="SoundDeath" value="player1death"/>
+	<property name="SoundStamina" value="player1stamina"/>
+	<property name="SoundDrownPain" value="player1drownpain"/>
+	<property name="SoundWaterSurface" value="player1drownsurface"/>
+	<property name="SoundDrownDeath" value="player1drowndeath"/>
+	<property name="SoundJump" value="player1Jump"/>
+	<property name="SoundLandSoft" value="player1LandSoft"/>
+	<property name="SoundLandHard" value="player1LandHard"/>
+	<property name="SoundPlayerLandThump" value="PlayerLandThump"/>
+	<property name="MaxViewAngle" value="180"/>
+	<property name="SightRange" value="30"/>
+	<property name="SightLightThreshold" value="-2,150"/>
+	<property name="MoveSpeed" value="0.85"/>
+	<property name="MoveSpeedAggro" value="1.5, 1.5"/>
+	<property name="MoveSpeedPanic" value="1.5"/>
+	<property name="CanClimbLadders" value="true"/>
+	<property name="ExperienceGain" value="0"/>
+	<property name="TimeStayAfterDeath" value="30"/>
+	<property name="DeadBodyHitPoints" value="200"/>
+	<property name="HandItem" value="meleeHandPlayer"/>
+	<property name="NavObject" value="party,ally"/>
+	<property name="MapIcon" value="ui_game_symbol_map_player_arrow"/>
+	<property name="TrackerIcon" value="ui_game_symbol_run"/>
+
+	<property name="AITask-1" value="ApproachAndAttackTarget" data="class=EntityZombie,25,EntityEnemyAnimal,20"/>
+	<property name="AITask-2" value="ApproachSpot"/>
+	<property name="AITask-3" value="Look"/>
+	<property name="AITask-4" value="Wander"/>
+	<property name="AITarget-1" value="SetAsTargetIfHurt" data="class=EntityZombie,EntityEnemyAnimal"/>
+	<property name="AITarget-2" value="SetNearestEntityAsTarget" data="class=EntityZombie,0,25,EntityEnemyAnimal,0,20"/>
+
+	<effect_group name="Base Effects">
+		<passive_effect name="HealthMax" operation="base_set" value="500"/>
+		<passive_effect name="StaminaMax" operation="base_set" value="200"/>
+		<passive_effect name="BuffResistance" operation="base_set" value="1" tags="buffFatiguedTrigger,buffArmSprainedCHTrigger,buffLegSprainedCHTrigger,buffLaceration,buffInfectionCatch,buffAbrasionCatch,buffInjuryStunned01CHTrigger,buffInjuryBleedingOne,buffInjuryBleedingTwo,buffInjuryBleeding,buffBurningZombie,buffBurningElement,buffBurningEnvironment,buffBurningEnvironmentHack,buffBurningFlamingArrow,buffBurningMolotov,buffIsOnFire,buffShocked,buffRadiationPool"/>
+	</effect_group>
+
+	<effect_group>
+		<passive_effect name="HealthChangeOT" operation="base_set" value="0.5"/>
+	</effect_group>
+</entity_class>
+
+<entity_class name="companionBotArmed" extends="companionBot">
+	<property name="HandItem" value="gunRifleT1AK47"/>
+	<property name="ItemsOnEnterGame.GameModeSurvival" value="gunRifleT1AK47,ammo762mmBulletBall"/>
+	<property name="ItemsOnEnterGame.GameModeSurvivalSP" value="gunRifleT1AK47,ammo762mmBulletBall"/>
+	<property name="ItemsOnEnterGame.GameModeSurvivalMP" value="gunRifleT1AK47,ammo762mmBulletBall"/>
+	<property name="AITask-1" value="ApproachAndAttackTarget" data="class=EntityZombie,35,EntityEnemyAnimal,30"/>
+	<property name="AITarget-2" value="SetNearestEntityAsTarget" data="class=EntityZombie,0,35,EntityEnemyAnimal,0,30"/>
+	<effect_group name="Base Effects">
+		<passive_effect name="HealthMax" operation="base_set" value="750"/>
+		<passive_effect name="StaminaMax" operation="base_set" value="300"/>
+		<passive_effect name="BuffResistance" operation="base_set" value="1" tags="buffFatiguedTrigger,buffArmSprainedCHTrigger,buffLegSprainedCHTrigger,buffLaceration,buffInfectionCatch,buffAbrasionCatch,buffInjuryStunned01CHTrigger,buffInjuryBleedingOne,buffInjuryBleedingTwo,buffInjuryBleeding,buffBurningZombie,buffBurningElement,buffBurningEnvironment,buffBurningEnvironmentHack,buffBurningFlamingArrow,buffBurningMolotov,buffIsOnFire,buffShocked,buffRadiationPool"/>
+	</effect_group>
+</entity_class>
+
+	</append>
+</configs>
