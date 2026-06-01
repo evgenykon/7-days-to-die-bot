@@ -1,6 +1,65 @@
 # TODO - CompanionBot Development Plan
 
-## Phase 1: Core Stability (Current)
+## KILLER FEATURE: LLM-Powered Communication
+
+Companion communicates with player via local LLM (LM Studio). Supportive, respectful tone. Configurable gender. RAG builds knowledge base from gameplay.
+
+### Core LLM Integration
+- [ ] LLMClient — HTTP client for LM Studio OpenAI-compatible API
+- [ ] Config file (llm_config.json) — endpoint, model, temperature, max_tokens
+- [ ] System prompt with personality, gender, tone guidelines
+- [ ] ChatSystem — context-aware messages to player via game chat
+- [ ] Gender configuration in XML entity (`Gender` property: male/female)
+- [ ] Gender-aware speech patterns (Russian: "сделал"/"сделала", etc.)
+- [ ] Rate limiting (don't spam player, cooldown between messages)
+- [ ] Fallback phrases when LLM is unavailable
+
+### RAG System (Retrieval-Augmented Generation)
+- [ ] MemoryLogger — capture game events (kills, deaths, crafting, loot, locations)
+- [ ] Event types: combat, exploration, crafting, building, trading, horde nights
+- [ ] Vector store (local JSON file with embeddings)
+- [ ] Embedding generation via LM Studio `/v1/embeddings` endpoint
+- [ ] Semantic search for relevant memories
+- [ ] Memory decay (older memories less relevant)
+- [ ] Memory summarization (compress old events into summaries)
+- [ ] Persistent memory across game sessions (save/load)
+- [ ] Memory categories (combat, relationships, locations, items)
+
+### Communication Triggers
+- [ ] On player kill (praise, encouragement)
+- [ ] On player death (comfort, support)
+- [ ] On companion kill (modest pride, teamwork)
+- [ ] On horde night start (alert, encouragement)
+- [ ] On horde night end (celebration, relief)
+- [ ] On finding rare loot (excitement, congratulations)
+- [ ] On crafting something (interest, admiration)
+- [ ] On building/upgrading base (approval, suggestions)
+- [ ] On low HP (concern, offer help)
+- [ ] On player low HP (urgency, care)
+- [ ] On blood moon (determination, solidarity)
+- [ ] On day start (greeting, plans for the day)
+- [ ] On night start (caution, readiness)
+- [ ] Idle chatter (random supportive comments, observations)
+- [ ] Player-initiated dialogue (respond to player chat messages)
+
+### Tone & Personality
+- [ ] Always supportive and respectful
+- [ ] No rudeness, insults, or toxic behavior
+- [ ] Encouraging during failures
+- [ ] Celebrating successes
+- [ ] Contextual humor (appropriate, not offensive)
+- [ ] Personality traits configurable (brave, cautious, cheerful, serious)
+- [ ] Relationship building (remember player preferences, playstyle)
+
+### Technical
+- [ ] Async HTTP requests (don't block game thread)
+- [ ] Request queue (batch messages if LLM is slow)
+- [ ] Error handling (LLM unavailable, timeout, malformed response)
+- [ ] Logging all LLM interactions for debugging
+- [ ] Performance monitoring (latency, token usage)
+- [ ] Configurable verbosity (silent, normal, chatty)
+
+## Phase 1: Core Stability (COMPLETE)
 
 - [x] Basic companion entity (XML definition)
 - [x] Follow player behavior
@@ -9,21 +68,21 @@
 - [x] Health regeneration
 - [x] Armed companion variant
 - [x] Configurable game path
-- [ ] Fix potential null reference on entity death cleanup
-- [ ] Handle companion persistence across game saves
-- [ ] Test with multiple players on private server
-- [ ] Verify companion doesn't aggro on friendly players
+- [x] Fix potential null reference on entity death cleanup
+- [x] Handle companion persistence across game saves
+- [x] Support multiple companions for different players
+- [x] Verify companion doesn't aggro on friendly players
 
 ## Phase 2: Player Commands
 
-- [ ] `cb spawn` — spawn companion at player position
-- [ ] `cb dismiss` — remove companion
-- [ ] `cb stay` — companion holds position
-- [ ] `cb follow` — companion resumes following
-- [ ] `cb guard` — companion patrols a small area
+- [x] `cb spawn` — spawn companion at player position (with type selection)
+- [x] `cb dismiss` — remove companion
+- [x] `cb stay` — companion holds position
+- [x] `cb follow` — companion resumes following
+- [x] `cb guard` — companion patrols a small area (configurable radius)
+- [x] `cb status` — show companion HP, weapon, distance, state
 - [ ] `cb heal` — use medkit on companion
 - [ ] `cb equip <item>` — give weapon/armor to companion
-- [ ] `cb status` — show companion HP, weapon, distance
 - [ ] Keybind support for quick commands
 
 ## Phase 3: Combat Improvements

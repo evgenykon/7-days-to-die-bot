@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using HarmonyLib;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace CompanionBot
@@ -10,70 +12,107 @@ namespace CompanionBot
     {
         private static Harmony _harmony;
         public static ModMain Instance { get; private set; }
-        public static List<EntityAlive> Companions { get; } = new List<EntityAlive>();
+
+        public static LLMClient LLM { get; private set; }
+        public static RAGSystem RAG { get; private set; }
+        public static MemoryLogger MemoryLog { get; private set; }
+        public static ChatSystem Chat { get; private set; }
 
         public void InitMod(Mod _modInstance)
         {
             Instance = this;
             _harmony = new Harmony("com.ai7d2d.companionbot");
             _harmony.PatchAll(Assembly.GetExecutingAssembly());
+
+            SaveSystem.Initialize();
+            InitializeLLMSystems();
+
             Log.Out("[CompanionBot] Mod loaded successfully");
         }
-    }
 
-    [HarmonyPatch(typeof(ConsoleCmdSpawnEntity), "Execute")]
-    public class SpawnCompanionPatch
-    {
-        static bool Prefix(string[] _params, CommandSenderInfo _senderInfo)
+        private void InitializeLLMSystems()
         {
-            if (_params.Length < 1)
-                return true;
-
-            string entityName = _params[0].ToLower();
-
-            if (entityName == "companionbot" || entityName == "companionbotarmed")
+            try
             {
-                try
+                var configPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "Config", "llm_config.json");
+
+                if (!File.Exists(configPath))
                 {
-                    EntityPlayer player = _senderInfo.RemoteClientInfo?.entityPlayerLocal;
-                    if (player == null)
-                    {
-                        player = GameManager.Instance.World.GetPrimaryPlayer();
-                    }
-
-                    if (player == null)
-                    {
-                        SdtdConsole.Instance.Output("Player not found");
-                        return false;
-                    }
-
-                    Vector3 spawnPos = player.position + new Vector3(2, 0, 2);
-                    int entityId = EntityFactory.CreateEntity(entityName, spawnPos);
-
-                    if (entityId > 0)
-                    {
-                        EntityAlive companion = GameManager.Instance.World.GetEntity(entityId) as EntityAlive;
-                        if (companion != null)
-                        {
-                            ModMain.Companions.Add(companion);
-                            SdtdConsole.Instance.Output($"Companion spawned successfully! Entity ID: {entityId}");
-                            Log.Out($"[CompanionBot] Spawned {entityName} at {spawnPos}, ID: {entityId}");
-                        }
-                    }
-                    else
-                    {
-                        SdtdConsole.Instance.Output("Failed to spawn companion");
-                    }
+                    Log.Error($"[CompanionBot] Config not found: {configPath}");
+                    return;
                 }
-                catch (Exception ex)
-                {
-                    Log.Error($"[CompanionBot] Error spawning companion: {ex.Message}");
-                    SdtdConsole.Instance.Output($"Error: {ex.Message}");
-                }
-                return false;
+
+                var configJson = File.ReadAllText(configPath);
+                var config = JsonConvert.DeserializeObject<LLMConfig>(configJson);
+
+                LLM = new LLMClient(
+                    config.Endpoint,
+                    config.Model,
+                    config.Temperature,
+                    config.MaxTokens,
+                    config.RateLimit.CooldownSeconds
+                );
+
+                var memoryPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "Data", "memories.json");
+                RAG = new RAGSystem(LLM, memoryPath);
+                MemoryLog = new MemoryLogger(RAG);
+
+                Chat = new ChatSystem(
+                    LLM,
+                    RAG,
+                    "male",
+                    config.Personality.Tone,
+                    config.Personality.Verbosity
+                );
+
+                Log.Out("[CompanionBot] LLM systems initialized");
             }
+            catch (Exception ex)
+            {
+                Log.Error($"[CompanionBot] Failed to initialize LLM systems: {ex.Message}");
+            }
+        }
 
-            return true;
+        private class LLMConfig
+        {
+            [JsonProperty("endpoint")]
+            public string Endpoint { get; set; }
+
+            [JsonProperty("model")]
+            public string Model { get; set; }
+
+            [JsonProperty("temperature")]
+            public float Temperature { get; set; }
+
+            [JsonProperty("max_tokens")]
+            public int MaxTokens { get; set; }
+
+            [JsonProperty("personality")]
+            public PersonalityConfig Personality { get; set; }
+
+            [JsonProperty("rate_limit")]
+            public RateLimitConfig RateLimit { get; set; }
+        }
+
+        private class PersonalityConfig
+        {
+            [JsonProperty("tone")]
+            public string Tone { get; set; }
+
+            [JsonProperty("verbosity")]
+            public string Verbosity { get; set; }
+
+            [JsonProperty("humor")]
+            public string Humor { get; set; }
+        }
+
+        private class RateLimitConfig
+        {
+            [JsonProperty("messages_per_minute")]
+            public int MessagesPerMinute { get; set; }
+
+            [JsonProperty("cooldown_seconds")]
+            public int CooldownSeconds { get; set; }
         }
     }
 
@@ -82,28 +121,96 @@ namespace CompanionBot
     {
         static void Postfix(EntityAlive __instance)
         {
-            if (!ModMain.Companions.Contains(__instance))
+            var companionData = CompanionManager.GetCompanion(__instance.entityId);
+            if (companionData == null)
                 return;
 
             if (__instance.IsDead())
             {
-                ModMain.Companions.Remove(__instance);
+                CompanionManager.UnregisterCompanion(__instance.entityId);
                 return;
             }
 
-            CompanionAI.Update(__instance);
+            CompanionAI.Update(companionData);
         }
     }
 
     [HarmonyPatch(typeof(EntityAlive), "OnEntityDeath")]
     public class CompanionDeathPatch
     {
-        static void Postfix(EntityAlive __instance)
+        static void Postfix(EntityAlive __instance, EntityAlive _attackingEntity)
         {
-            if (ModMain.Companions.Contains(__instance))
+            if (__instance == null)
+                return;
+
+            if (__instance is EntityPlayer)
             {
-                ModMain.Companions.Remove(__instance);
+                ModMain.MemoryLog?.LogDeath(__instance, _attackingEntity);
+                _ = ModMain.Chat?.SendMessage("player_death", "Игрок погиб");
+            }
+
+            var companionData = CompanionManager.GetCompanion(__instance.entityId);
+            if (companionData != null)
+            {
+                CompanionManager.UnregisterCompanion(__instance.entityId);
                 Log.Out($"[CompanionBot] Companion died: {__instance.entityId}");
+                _ = ModMain.Chat?.SendMessage("companion_death", "Компаньон погиб");
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(EntityAlive), "OnEntityKill")]
+    public class EntityKillPatch
+    {
+        static void Postfix(EntityAlive __instance, EntityAlive _attackingEntity)
+        {
+            if (__instance == null || _attackingEntity == null)
+                return;
+
+            if (_attackingEntity is EntityPlayer)
+            {
+                ModMain.MemoryLog?.LogKill(_attackingEntity, __instance);
+                _ = ModMain.Chat?.SendMessage("player_kill", $"Игрок убил {__instance.EntityName}");
+            }
+            else if (CompanionManager.GetCompanion(_attackingEntity.entityId) != null)
+            {
+                ModMain.MemoryLog?.LogKill(_attackingEntity, __instance);
+                _ = ModMain.Chat?.SendMessage("companion_kill", $"Компаньон убил {__instance.EntityName}");
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(GameManager), "SaveWorld")]
+    public class SaveWorldPatch
+    {
+        static void Prefix()
+        {
+            try
+            {
+                SaveSystem.SaveCompanions();
+                Log.Out("[CompanionBot] World save - companions saved");
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"[CompanionBot] Failed to save companions on world save: {ex.Message}");
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(GameManager), "LoadWorld")]
+    public class LoadWorldPatch
+    {
+        static void Postfix()
+        {
+            try
+            {
+                CompanionManager.Cleanup();
+                SaveSystem.LoadCompanions();
+                Log.Out("[CompanionBot] World load - companions restored");
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"[CompanionBot] Failed to load companions on world load: {ex.Message}");
             }
         }
     }
@@ -114,12 +221,27 @@ namespace CompanionBot
         private const float MaxFollowDistance = 15f;
         private const float AttackRange = 25f;
         private const float UpdateInterval = 0.5f;
+        private const float GuardReturnDistance = 5f;
 
         private static Dictionary<int, float> lastUpdateTime = new Dictionary<int, float>();
-        private static Dictionary<int, EntityPlayer> companionOwners = new Dictionary<int, EntityPlayer>();
 
-        public static void Update(EntityAlive companion)
+        public static void Update(CompanionData companionData)
         {
+            if (companionData == null)
+                return;
+
+            var companion = companionData.Entity;
+            var owner = companionData.Owner;
+
+            if (companion == null || companion.IsDead())
+            {
+                CompanionManager.UnregisterCompanion(companionData.Entity?.entityId ?? -1);
+                return;
+            }
+
+            if (owner == null || owner.IsDead())
+                return;
+
             int entityId = companion.entityId;
 
             if (!lastUpdateTime.ContainsKey(entityId))
@@ -132,12 +254,6 @@ namespace CompanionBot
 
             lastUpdateTime[entityId] = Time.time;
 
-            EntityPlayer owner = GetOwner(companion);
-            if (owner == null || owner.IsDead())
-                return;
-
-            float distanceToOwner = Vector3.Distance(companion.position, owner.position);
-
             EntityAlive target = FindNearestEnemy(companion, owner);
 
             if (target != null && Vector3.Distance(companion.position, target.position) <= AttackRange)
@@ -147,6 +263,25 @@ namespace CompanionBot
             }
 
             companion.SetAttackTarget(null);
+
+            switch (companionData.State)
+            {
+                case CompanionState.Follow:
+                    UpdateFollowState(companion, owner);
+                    break;
+
+                case CompanionState.Stay:
+                    break;
+
+                case CompanionState.Guard:
+                    UpdateGuardState(companion, companionData);
+                    break;
+            }
+        }
+
+        private static void UpdateFollowState(EntityAlive companion, EntityPlayer owner)
+        {
+            float distanceToOwner = Vector3.Distance(companion.position, owner.position);
 
             if (distanceToOwner > MaxFollowDistance)
             {
@@ -158,45 +293,27 @@ namespace CompanionBot
             }
         }
 
-        private static EntityPlayer GetOwner(EntityAlive companion)
+        private static void UpdateGuardState(EntityAlive companion, CompanionData companionData)
         {
-            int entityId = companion.entityId;
+            float distanceToGuardPos = Vector3.Distance(companion.position, companionData.GuardPosition);
 
-            if (companionOwners.ContainsKey(entityId))
+            if (distanceToGuardPos > companionData.GuardRadius)
             {
-                EntityPlayer owner = companionOwners[entityId];
-                if (owner != null && !owner.IsDead())
-                    return owner;
+                MoveTowards(companion, companionData.GuardPosition);
             }
-
-            EntityPlayer nearestPlayer = null;
-            float nearestDistance = float.MaxValue;
-
-            foreach (EntityPlayer player in GameManager.Instance.World.Players.list)
+            else if (distanceToGuardPos > GuardReturnDistance)
             {
-                if (player == null || player.IsDead())
-                    continue;
-
-                float distance = Vector3.Distance(companion.position, player.position);
-                if (distance < nearestDistance)
-                {
-                    nearestDistance = distance;
-                    nearestPlayer = player;
-                }
+                MoveTowards(companion, companionData.GuardPosition);
             }
-
-            if (nearestPlayer != null)
-            {
-                companionOwners[entityId] = nearestPlayer;
-            }
-
-            return nearestPlayer;
         }
 
         private static EntityAlive FindNearestEnemy(EntityAlive companion, EntityPlayer owner)
         {
             EntityAlive nearestEnemy = null;
             float nearestDistance = AttackRange;
+
+            if (GameManager.Instance?.World?.Entities?.list == null)
+                return null;
 
             List<EntityAlive> entities = GameManager.Instance.World.Entities.list;
             foreach (EntityAlive entity in entities)
@@ -208,6 +325,12 @@ namespace CompanionBot
                     continue;
 
                 if (entity is EntityPlayer)
+                    continue;
+
+                if (CompanionManager.GetCompanion(entity.entityId) != null)
+                    continue;
+
+                if (entity is EntityTrader || entity is EntityNPC)
                     continue;
 
                 if (!(entity is EntityZombie) && !(entity is EntityEnemyAnimal))
@@ -237,14 +360,6 @@ namespace CompanionBot
             companion.position = teleportPos;
             companion.transform.position = teleportPos;
             Log.Out($"[CompanionBot] Teleported companion to owner");
-        }
-    }
-
-    public static class ConsoleCommands
-    {
-        public static void RegisterCommands()
-        {
-            SdtdConsole.Instance.ExecuteSync("help", null);
         }
     }
 }
