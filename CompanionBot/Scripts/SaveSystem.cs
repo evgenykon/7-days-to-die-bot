@@ -145,7 +145,13 @@ namespace CompanionBot
                     return;
                 }
 
-                var spawnedEntity = EntityFactory.CreateEntity(data.EntityType.GetHashCode(), data.Position);
+                int entityClassId = EntityClass.FromString(data.EntityType);
+                if (entityClassId < 0)
+                {
+                    Log.Error($"[CompanionBot] Unknown entity class: {data.EntityType}");
+                    return;
+                }
+                var spawnedEntity = EntityFactory.CreateEntity(entityClassId, data.Position);
                 int entityId = spawnedEntity != null ? spawnedEntity.entityId : -1;
 
                 if (entityId <= 0)

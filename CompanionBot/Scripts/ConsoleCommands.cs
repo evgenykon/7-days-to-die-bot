@@ -242,7 +242,13 @@ Advanced Features (Phase 10):
             try
             {
                 var spawnPos = player.position + new Vector3(2, 0, 2);
-                var entity = EntityFactory.CreateEntity(entityType.GetHashCode(), spawnPos);
+                int entityClassId = EntityClass.FromString(entityType);
+                if (entityClassId < 0)
+                {
+                    Output(_senderInfo, $"Unknown entity class: {entityType}");
+                    return;
+                }
+                var entity = EntityFactory.CreateEntity(entityClassId, spawnPos);
                 int entityId = entity != null ? entity.entityId : -1;
 
                 if (entityId > 0)
