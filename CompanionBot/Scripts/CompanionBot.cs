@@ -116,28 +116,42 @@ namespace CompanionBot
         }
     }
 
-    [HarmonyPatch(typeof(EntityAlive), "Update")]
-    public class CompanionAIPatch
+    [HarmonyPatch(typeof(GameManager), "Update")]
+    public class CompanionTickPatch
     {
-        static void Postfix(EntityAlive __instance)
+        static void Postfix()
         {
-            var companionData = CompanionManager.GetCompanion(__instance.entityId);
-            if (companionData == null)
-                return;
+            CompanionTickSystem.Tick();
+        }
+    }
 
-            if (__instance.IsDead())
-            {
-                CompanionManager.UnregisterCompanion(__instance.entityId);
-                return;
-            }
+    public static class CompanionTickSystem
+    {
+        private static float _lastTick = 0f;
+        private const float TickInterval = 0.5f;
 
-            CompanionAI.Update(companionData);
-            
-            // Advanced AI behaviors (Phase 5)
-            var owner = companionData.Owner;
-            if (owner != null && !owner.IsDead())
+        public static void Tick()
+        {
+            if (Time.time - _lastTick < TickInterval)
+                return;
+            _lastTick = Time.time;
+
+            var companions = CompanionManager.GetAllCompanions();
+            foreach (var companionData in companions)
             {
-                AdvancedAI.Update(__instance, owner);
+                if (companionData.Entity == null || companionData.Entity.IsDead())
+                {
+                    CompanionManager.UnregisterCompanion(companionData.Entity?.entityId ?? -1);
+                    continue;
+                }
+
+                CompanionAI.Update(companionData);
+
+                var owner = companionData.Owner;
+                if (owner != null && !owner.IsDead())
+                {
+                    AdvancedAI.Update(companionData.Entity, owner);
+                }
             }
         }
     }
