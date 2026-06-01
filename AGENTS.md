@@ -83,6 +83,57 @@ CompanionBot\build.bat
 
 No linter or type checker is configured yet. The project uses standard C# conventions.
 
+## Development Workflow (build → deploy → check)
+
+### Quick Deploy (after code changes)
+```powershell
+# 1. Build
+dotnet build CompanionBot/CompanionBot.csproj -c Release
+
+# 2. Deploy (copy DLL + Config to game)
+deploy.bat
+
+# 3. Get latest log
+Get-ChildItem "$env:APPDATA\7DaysToDie\Logs" -Filter "*.txt" | Sort-Object LastWriteTime -Descending | Select-Object -First 1 | % { Get-Content $_.FullName | Select-String -Pattern "CompanionBot|ERR|Exception|Failed" -Context 2,2 }
+```
+
+### All-in-one
+```powershell
+# Build + Deploy + Show errors
+deploy.bat
+Get-ChildItem "$env:APPDATA\7DaysToDie\Logs" -Filter "*.txt" | Sort-Object LastWriteTime -Descending | Select-Object -First 1 | % { Get-Content $_.FullName | Select-String -Pattern "ERR.*CompanionBot|Failed|Exception" }
+```
+
+### Common issues & fixes
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `Undefined target method` | Harmony patches a method that doesn't exist | Remove the `[HarmonyPatch]` class |
+| `Could not load file 'Entities/...'` | Bad Mesh path in entityclasses.xml | Remove `<property name="Mesh"...>` or fix path |
+| `unknown type (1954174657)` | Entity class ID not found | Use `EntityClass.FromString(name)` in code |
+| `Object reference not set` | Entity creation failed | Check previous errors in log |
+
+## Check logs after deploy
+
+Game logs location: `%APPDATA%\7DaysToDie\Logs\output_log_*.txt`
+
+```powershell
+# Get latest log
+$log = Get-ChildItem "$env:APPDATA\7DaysToDie\Logs" -Filter "*.txt" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+
+# Find CompanionBot errors
+Get-Content $log.FullName | Select-String -Pattern "ERR.*CompanionBot|Failed.*CompanionBot|Exception.*CompanionBot"
+
+# Find Harmony errors
+Get-Content $log.FullName | Select-String -Pattern "Harmony.*Failed|Harmony.*Exception"
+
+# Find all CompanionBot related
+Get-Content $log.FullName | Select-String -Pattern "CompanionBot"
+```
+
+### Log file naming
+Logs are named `output_log_client__YYYY-MM-DD__HH-MM-SS.txt`. If the file is 0 bytes, the game hasn't been started yet.
+
 ## Game Path Configuration
 
 The path to 7 Days to Die is configured in `Directory.Build.props` (root of repo). This file is **gitignored**. Each developer copies `Directory.Build.props.example` and sets their own path:
