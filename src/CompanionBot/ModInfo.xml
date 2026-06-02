@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xml>
+  <Name value="CompanionBot" />
+  <DisplayName value="AI Companion Bot v3" />
+  <Description value="Minimal movement test" />
+  <Author value="AI-7D2D" />
+  <Version value="3.0.0" />
+  <SkipWithAntiCheat value="true" />
+</xml>

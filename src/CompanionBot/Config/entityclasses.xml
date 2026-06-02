@@ -1,0 +1,12 @@
+<configs>
+  <append xpath="/entity_classes">
+    <entity_class name="companionBot" extends="npcTraderTemplate">
+      <property name="Class" value="CompanionEntity, CompanionBot" />
+      <property name="Mesh" value="@:Entities/Traders/Prefabs/TraderJoel.prefab" />
+      <property name="IsEnemyEntity" value="false" />
+      <property name="Health" value="500" />
+      <property name="NPCID" value="" />
+      <property name="Group" value="CompanionBot" />
+    </entity_class>
+  </append>
+</configs>
