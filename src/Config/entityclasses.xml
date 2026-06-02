@@ -1,0 +1,27 @@
+<configs>
+  <append xpath="/entity_classes">
+    <entity_class name="companionBot" extends="zombieTemplate">
+      <property name="Class" value="CompanionBotV2.CompanionEntity, CompanionBot" />
+      <property name="Mesh" value="Zombies/ZombieMale" />
+      <property name="DropScale" value="0" />
+      <property name="IsEnemyEntity" value="false" />
+      <property name="Faction" value="player" />
+      <property name="LootDropProb" value="0" />
+      <property name="BossHP" value="0" />
+      <property name="DMSClass" value="" />
+      <property name="SoundAlert" value="None" />
+      <property name="SoundDeath" value="None" />
+      <property name="SoundIdle" value="None" />
+      <property name="SoundRandom" value="None" />
+      <property name="SoundHurt" value="None" />
+      <property name="Health" value="500" />
+      <property name="MoveSpeed" value="1.5" />
+      <property name="MoveSpeedMax" value="2.0" />
+      <property name="HandItem" value="" />
+      <property name="HandItems" value="" />
+      <property name="XPMultiplier" value="0" />
+      <property name="TimeStayAfterDeath" value="0" />
+      <property name="Group" value="CompanionBot" />
+    </entity_class>
+  </append>
+</configs>
