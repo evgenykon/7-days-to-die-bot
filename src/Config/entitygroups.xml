@@ -1,5 +1,5 @@
 <configs>
-  <append xpath="/entity_groups">
+  <append xpath="/entitygroups">
     <entity_group name="CompanionBot" mods="CompanionBot">
       <entity name="companionBot" />
     </entity_group>

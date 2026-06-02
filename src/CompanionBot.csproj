@@ -37,6 +37,8 @@
     <Reference Include="System.Net.Http" />
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="if not exist &quot;$(GamePath)\Mods\CompanionBot&quot; mkdir &quot;$(GamePath)\Mods\CompanionBot&quot;" IgnoreExitCode="true" />
+    <Exec Command="if not exist &quot;$(GamePath)\Mods\CompanionBot\Config&quot; mkdir &quot;$(GamePath)\Mods\CompanionBot\Config&quot;" IgnoreExitCode="true" />
     <Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;$(GamePath)\Mods\CompanionBot\$(TargetFileName)&quot;" />
     <Exec Command="xcopy /E /I /Y &quot;$(ProjectDir)Config&quot; &quot;$(GamePath)\Mods\CompanionBot\Config&quot;" />
     <Exec Command="copy /Y &quot;$(ProjectDir)ModInfo.xml&quot; &quot;$(GamePath)\Mods\CompanionBot\ModInfo.xml&quot;" />

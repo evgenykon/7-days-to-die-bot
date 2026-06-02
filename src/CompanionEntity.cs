@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
 namespace CompanionBotV2
@@ -11,12 +12,6 @@ namespace CompanionBotV2
         private const float SearchInterval = 2f;
         private const float FollowDistance = 3f;
         private const float TeleportDistance = 20f;
-
-        public override void Init()
-        {
-            base.Init();
-            Log.Out($"[CompanionBot v2] CompanionEntity Init: {entityId}");
-        }
 
         public override void OnAddedToWorld()
         {
@@ -107,7 +102,9 @@ namespace CompanionBotV2
                     var faction = FactionManager.Instance.GetFactionByName(factionName);
                     if (faction != null)
                     {
-                        SetFactionInternal(faction);
+                        var prop = typeof(EntityAlive).GetProperty("Faction", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                        if (prop != null && prop.CanWrite)
+                            prop.SetValue(this, faction);
                         Log.Out($"[CompanionBot v2] Faction set to {factionName}");
                     }
                 }
@@ -116,13 +113,6 @@ namespace CompanionBotV2
             {
                 Log.Error($"[CompanionBot v2] Failed to set faction: {ex.Message}");
             }
-        }
-
-        private void SetFactionInternal(Faction faction)
-        {
-            var field = typeof(EntityAlive).GetField("faction", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (field != null)
-                field.SetValue(this, faction);
         }
     }
 }
