@@ -134,6 +134,7 @@ namespace CompanionBotV2
         private void Output(CommandSenderInfo _senderInfo, string message)
         {
             SdtdConsole.Instance.Output(message);
+            Log.Out($"[CB] {message}");
         }
 
         private void OutputHelp(CommandSenderInfo _senderInfo)

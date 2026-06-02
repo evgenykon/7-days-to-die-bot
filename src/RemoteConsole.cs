@@ -50,8 +50,8 @@ namespace CompanionBotV2
                         }
                     }
                 }
-                catch when (!_running) { }
-                catch { }
+                catch (Exception ex) when (!_running) { Log.Out($"[CB-Remote] Stopped: {ex.Message}"); }
+                catch (Exception ex) { Log.Error($"[CB-Remote] Error: {ex.Message}"); }
             }
         }
     }

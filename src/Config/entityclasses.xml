@@ -1,14 +1,10 @@
 <configs>
   <append xpath="/entity_classes">
-    <entity_class name="companionBot" extends="zombieTemplateMale">
-      <property name="Class" value="EntityZombie" />
+    <entity_class name="companionBot" extends="npcTraderTemplate">
+      <property name="Class" value="CompanionBotV2.CompanionEntity, CompanionBot" />
       <property name="IsEnemyEntity" value="false" />
-      <property name="Faction" value="player" />
-      <property name="LootDropProb" value="0" />
-      <property name="BossHP" value="0" />
+      <property name="Mesh" value="@:Entities/Traders/Prefabs/TraderJoel.prefab" />
       <property name="Health" value="500" />
-      <property name="MoveSpeed" value="1.5" />
-      <property name="MoveSpeedMax" value="2.0" />
       <property name="Group" value="CompanionBot" />
     </entity_class>
   </append>
