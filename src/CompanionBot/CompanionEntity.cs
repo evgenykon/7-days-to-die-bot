@@ -4,8 +4,9 @@ public class CompanionEntity : EntityAlive
 {
     private Vector3 _smoothDir;
     private const float FollowDist = 1.5f;
-    private const float MinDist = 0.6f;
+    private const float MinDist = 1.0f;
     private const float MoveSpeed = 0.4f;
+    private const float RetreatSpeed = 0.6f;
     private const float SmoothFactor = 0.12f;
 
     public override void PostInit()
@@ -37,12 +38,21 @@ public class CompanionEntity : EntityAlive
         {
             var awayDir = (position - player.position).normalized;
             _smoothDir = Vector3.Lerp(_smoothDir, awayDir, SmoothFactor);
-            motion = new Vector3(_smoothDir.x * MoveSpeed, motion.y, _smoothDir.z * MoveSpeed);
+            motion = new Vector3(_smoothDir.x * RetreatSpeed, motion.y, _smoothDir.z * RetreatSpeed);
         }
         else
         {
             _smoothDir = Vector3.zero;
             motion = new Vector3(0f, motion.y, 0f);
+        }
+
+        var yDiff = player.position.y - position.y;
+        if (yDiff > 0.5f)
+        {
+            if (Physics.Raycast(position, Vector3.down, out _, 1.2f))
+            {
+                motion.y = 7.5f;
+            }
         }
 
         speedForward = new Vector3(motion.x, 0f, motion.z).magnitude;
