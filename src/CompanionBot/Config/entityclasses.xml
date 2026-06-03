@@ -6,6 +6,11 @@
       <property name="IsEnemyEntity" value="false" />
       <property name="Health" value="500" />
       <property name="Group" value="CompanionBot" />
+      <property name="MoveSpeed" value="0.2" />
+      <property name="MoveSpeedAggro" value="0.2, 0.2" />
+      <property name="MoveSpeedPanic" value="0.2" />
+      <property name="AITask" value="" />
+      <property name="AITarget" value="" />
     </entity_class>
   </append>
 </configs>
