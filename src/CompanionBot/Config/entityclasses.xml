@@ -2,6 +2,7 @@
   <append xpath="/entity_classes">
     <entity_class name="companionBot" extends="npcMeleeTemplate">
       <property name="Class" value="CompanionEntity, CompanionBot" />
+      <property name="Mesh" value="#@modfolder(0-XNPCCore):Resources/XythNPCs.unity3d?Quinn_X" />
       <property name="IsEnemyEntity" value="false" />
       <property name="Health" value="500" />
       <property name="Group" value="CompanionBot" />
