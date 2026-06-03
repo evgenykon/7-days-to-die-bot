@@ -39,4 +39,9 @@ Write-Host "  entityclasses.xml: OK" -ForegroundColor Green
 Copy-Item "$SrcDir\Config\entitygroups.xml" -Destination "$ConfigDir\entitygroups.xml" -Force
 Write-Host "  entitygroups.xml: OK" -ForegroundColor Green
 
+if (Test-Path "$SrcDir\Config\npc.xml") {
+    Copy-Item "$SrcDir\Config\npc.xml" -Destination "$ConfigDir\npc.xml" -Force
+    Write-Host "  npc.xml: OK" -ForegroundColor Green
+}
+
 Write-Host "=== Done ===" -ForegroundColor Cyan
