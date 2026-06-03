@@ -32,12 +32,21 @@ public class ConsoleCmdBotSay : ConsoleCmdAbstract
             if (localPlayer != null)
             {
                 var xui = localPlayer.PlayerUI.xui;
-                var chatOutput = xui.FindWindowGroupByName("chat") as XUiC_ChatOutput;
+                XUiC_ChatOutput chatOutput = null;
+
+                foreach (var wg in xui.WindowGroups)
+                {
+                    chatOutput = wg.Controller.GetChildByType<XUiC_ChatOutput>();
+                    if (chatOutput != null) break;
+                }
+
                 if (chatOutput != null)
                 {
                     chatOutput.addMessage(EnumGameMessages.Chat, EChatType.Global, EChatDirection.None, "Quinn", chatMsg, "");
                     return;
                 }
+
+                Log.Out("[CB] XUiC_ChatOutput not found in any window group");
             }
 
             SdtdConsole.Instance.Output(chatMsg);
