@@ -21,7 +21,6 @@ public class CompanionEntity : EntityAlive
 
     public override void OnUpdateLive()
     {
-        base.OnUpdateLive();
         if (IsDead()) return;
 
         var player = GameManager.Instance.World.GetPrimaryPlayer();
