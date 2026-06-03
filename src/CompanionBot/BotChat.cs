@@ -24,7 +24,6 @@ public class ConsoleCmdBotSay : ConsoleCmdAbstract
         }
 
         var message = string.Join(" ", _params);
-        var chatMsg = $"[Quinn] {message}";
 
         try
         {
@@ -45,7 +44,7 @@ public class ConsoleCmdBotSay : ConsoleCmdAbstract
                                 var chatOutput = child as XUiC_ChatOutput;
                                 if (chatOutput != null)
                                 {
-                                    chatOutput.addMessage(EnumGameMessages.Chat, EChatType.Global, EChatDirection.None, "Quinn", chatMsg, "");
+                                    chatOutput.addMessage(EnumGameMessages.Chat, EChatType.Global, EChatDirection.None, "Quinn", message, "");
                                     return;
                                 }
                             }
@@ -54,12 +53,12 @@ public class ConsoleCmdBotSay : ConsoleCmdAbstract
                 }
             }
 
-            SdtdConsole.Instance.Output(chatMsg);
+            SdtdConsole.Instance.Output(message);
         }
         catch (Exception ex)
         {
             Log.Error($"[CB] Chat send error: {ex.Message}");
-            SdtdConsole.Instance.Output(chatMsg);
+            SdtdConsole.Instance.Output(message);
         }
     }
 }
