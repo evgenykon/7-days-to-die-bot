@@ -6,7 +6,7 @@ public class ConsoleCmdBotSay : ConsoleCmdAbstract
 {
     public override string[] getCommands() => new[] { "botsay", "bs" };
 
-    public override string getDescription() => "Make companion bot say something. botsay <message>";
+    public override string getDescription() => "Make companion bot say something in chat. botsay <message>";
 
     public override void Execute(List<string> _params, CommandSenderInfo _senderInfo)
     {
@@ -25,7 +25,34 @@ public class ConsoleCmdBotSay : ConsoleCmdAbstract
 
         var message = string.Join(" ", _params);
         var chatMsg = $"[Quinn] {message}";
-        SdtdConsole.Instance.Output(chatMsg);
-        Log.Out($"[CB] {chatMsg}");
+
+        try
+        {
+            var localPlayer = player as EntityPlayerLocal;
+            if (localPlayer != null)
+            {
+                var xui = localPlayer.PlayerUI.xui;
+                var chatWindow = xui.FindWindowGroupByName("chat") as XUiC_Chat;
+                if (chatWindow != null && XUiC_Chat.messagingHandlers != null)
+                {
+                    foreach (var handler in XUiC_Chat.messagingHandlers)
+                    {
+                        if (handler != null && handler.IsValidTargetDelegate != null &&
+                            handler.IsValidTargetDelegate(EChatType.Global, "Quinn"))
+                        {
+                            handler.SendMessageDelegate(EChatType.Global, "Quinn", chatMsg);
+                            return;
+                        }
+                    }
+                }
+            }
+
+            SdtdConsole.Instance.Output(chatMsg);
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"[CB] Chat send error: {ex.Message}");
+            SdtdConsole.Instance.Output(chatMsg);
+        }
     }
 }
