@@ -4,7 +4,8 @@ public class CompanionEntity : EntityAlive
 {
     private Vector3 _smoothDir;
     private const float FollowDist = 1.5f;
-    private const float MoveSpeed = 0.8f;
+    private const float MinDist = 0.6f;
+    private const float MoveSpeed = 0.4f;
     private const float SmoothFactor = 0.12f;
 
     public override void PostInit()
@@ -28,9 +29,14 @@ public class CompanionEntity : EntityAlive
         var dist = Vector3.Distance(position, player.position);
         if (dist > FollowDist)
         {
-            moveHelper.SetMoveTo(player.position, true);
             var targetDir = (player.position - position).normalized;
             _smoothDir = Vector3.Lerp(_smoothDir, targetDir, SmoothFactor);
+            motion = new Vector3(_smoothDir.x * MoveSpeed, motion.y, _smoothDir.z * MoveSpeed);
+        }
+        else if (dist < MinDist && dist > 0.01f)
+        {
+            var awayDir = (position - player.position).normalized;
+            _smoothDir = Vector3.Lerp(_smoothDir, awayDir, SmoothFactor);
             motion = new Vector3(_smoothDir.x * MoveSpeed, motion.y, _smoothDir.z * MoveSpeed);
         }
         else
@@ -38,6 +44,9 @@ public class CompanionEntity : EntityAlive
             _smoothDir = Vector3.zero;
             motion = new Vector3(0f, motion.y, 0f);
         }
+
+        speedForward = new Vector3(motion.x, 0f, motion.z).magnitude;
+        speedStrafe = 0f;
     }
 
     public override void OnUpdatePosition(float _partialTicks)
@@ -51,8 +60,10 @@ public class CompanionEntity : EntityAlive
         var anim = GetComponentInChildren<Animator>();
         if (anim != null && anim.isActiveAndEnabled)
         {
+            anim.SetBool("IsMoving", speed > 0.01f);
             anim.SetFloat("Speed", speed);
             anim.SetFloat("speed", speed);
+            anim.SetFloat("Forward", speed);
         }
         DefaultMoveEntity(motion, true);
     }
