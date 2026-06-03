@@ -32,13 +32,17 @@ public class ConsoleCmdBotSay : ConsoleCmdAbstract
             if (localPlayer != null)
             {
                 var xui = localPlayer.PlayerUI.xui;
-                var entityId = localPlayer.entityId.ToString();
-                XUiC_Chat.SetChatTarget(xui, EChatType.Global, entityId);
                 var chatWindow = xui.FindWindowGroupByName("chat") as XUiC_Chat;
-                if (chatWindow != null)
+                if (chatWindow != null && XUiC_Chat.messagingHandlers != null)
                 {
-                    chatWindow.TextInput_OnSubmitHandler(chatWindow, chatMsg);
-                    return;
+                    foreach (var handler in XUiC_Chat.messagingHandlers)
+                    {
+                        if (handler != null && handler.SendMessageDelegate != null)
+                        {
+                            handler.SendMessageDelegate(EChatType.Global, "", chatMsg);
+                            return;
+                        }
+                    }
                 }
             }
 
