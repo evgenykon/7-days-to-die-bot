@@ -5,8 +5,8 @@ public class CompanionEntity : EntityAlive
     private Vector3 _smoothDir;
     private const float FollowDist = 1.5f;
     private const float MinDist = 1.0f;
-    private const float MoveSpeed = 0.2f;
-    private const float RetreatSpeed = 0.3f;
+    private const float MoveSpeed = 0.1f;
+    private const float RetreatSpeed = 0.15f;
     private const float SmoothFactor = 0.12f;
 
     public override void PostInit()
