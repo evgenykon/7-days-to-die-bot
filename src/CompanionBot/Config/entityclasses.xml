@@ -9,6 +9,7 @@
       <property name="MoveSpeed" value="0.15" />
       <property name="MoveSpeedAggro" value="0.15, 0.15" />
       <property name="MoveSpeedPanic" value="0.15" />
+      <property name="NPCID" value="CompanionQuinn" />
       <property name="AITask" value="" />
       <property name="AITarget" value="" />
       <effect_group name="CompanionSpeed">

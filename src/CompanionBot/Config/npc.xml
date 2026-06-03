@@ -1,0 +1,14 @@
+<configs>
+  <insertAfter xpath="/npc/npc_info[@id='NPCjunkDrone']">
+    <npc_info
+      id="CompanionQuinn"
+      name="Quinn"
+      name_key="npc_traitorJoel"
+      faction="whiteriver"
+      portrait="npc_nurse"
+      greeting_type="nearby"
+      stance="Like" voice_set=""
+      trader_id="1" dialog_id="GenericNPC"
+      localization_id="npcTraderBob" />
+  </insertAfter>
+</configs>
