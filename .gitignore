@@ -5,4 +5,4 @@ src/Data/
 *.user
 *.suo
 .vs/
-related_mods/related_mods/
+related_mods/
