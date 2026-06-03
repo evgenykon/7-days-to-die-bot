@@ -32,12 +32,15 @@ public class ConsoleCmdBotSay : ConsoleCmdAbstract
             if (localPlayer != null)
             {
                 var xui = localPlayer.PlayerUI.xui;
-                XUiC_ChatOutput chatOutput = null;
 
+                XUiC_ChatOutput chatOutput = null;
                 foreach (var wg in xui.WindowGroups)
                 {
-                    chatOutput = wg.Controller.GetChildByType<XUiC_ChatOutput>();
-                    if (chatOutput != null) break;
+                    if (wg.ID == "chatoutput")
+                    {
+                        chatOutput = wg.Controller as XUiC_ChatOutput;
+                        break;
+                    }
                 }
 
                 if (chatOutput != null)
@@ -46,7 +49,7 @@ public class ConsoleCmdBotSay : ConsoleCmdAbstract
                     return;
                 }
 
-                Log.Out("[CB] XUiC_ChatOutput not found in any window group");
+                Log.Out("[CB] XUiC_ChatOutput not found by ID='chatoutput'");
             }
 
             SdtdConsole.Instance.Output(chatMsg);
