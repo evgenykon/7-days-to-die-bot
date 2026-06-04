@@ -1,16 +1,8 @@
 {
   "name": "companion-bot-server",
-  "version": "1.0.0",
-  "description": "Bun + TypeScript bridge between LLM and 7D2D CompanionBot mod",
+  "version": "2.0.0",
+  "description": "Node.js bridge between LLM and 7D2D CompanionBot mod",
   "scripts": {
-    "start": "bun run server.ts",
-    "dev": "bun --watch server.ts"
-  },
-  "dependencies": {
-    "hono": "^4.7.0"
-  },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "typescript": "^5.8.0"
+    "start": "node server.js"
   }
 }

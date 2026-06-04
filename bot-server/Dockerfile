@@ -1,8 +1,7 @@
-FROM oven/bun:alpine
+FROM node:22-alpine
 WORKDIR /app
-COPY package.json bun.lock* ./
-RUN bun install
-COPY *.ts ./
-COPY tsconfig.json ./
+COPY package.json ./
+RUN npm install
+COPY *.js ./
 EXPOSE 9091
-CMD ["bun", "run", "server.ts"]
+CMD ["node", "server.js"]
