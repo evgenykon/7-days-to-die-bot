@@ -14,6 +14,8 @@ public class BotHttpServer
     private readonly int _port;
     private bool _running;
 
+    private const int DefaultPort = 9090;
+
     public BotHttpServer(int port = 8080)
     {
         _port = port;
@@ -24,26 +26,29 @@ public class BotHttpServer
     {
         if (_running) return;
 
+        Log.Out($"[CB] Start() called, port={_port}");
         _listener = new HttpListener();
-        _listener.Prefixes.Add($"http://+:{_port}/");
         _listener.Prefixes.Add($"http://localhost:{_port}/");
 
         try
         {
+            Log.Out("[CB] Starting HttpListener...");
             _listener.Start();
+            Log.Out("[CB] HttpListener started OK");
         }
         catch (Exception ex)
         {
-            Log.Error($"[CB] HTTP server start error: {ex.Message}");
+            Log.Error($"[CB] HTTP server start error: {ex.Message}\n{ex.StackTrace}");
             try
             {
                 _listener = new HttpListener();
                 _listener.Prefixes.Add($"http://localhost:{_port}/");
                 _listener.Start();
+                Log.Out("[CB] Fallback HttpListener started OK");
             }
             catch (Exception ex2)
             {
-                Log.Error($"[CB] HTTP server fallback error: {ex2.Message}");
+                Log.Error($"[CB] HTTP server fallback error: {ex2.Message}\n{ex2.StackTrace}");
                 return;
             }
         }
@@ -97,37 +102,34 @@ public class BotHttpServer
                 var sender = GetJsonString(data, "sender") ?? "Quinn";
 
                 SendChatMessage(sender, message);
-                result = new { ok = true, message = $"Sent: {message}" };
+                result = Dict("ok", true, "message", $"Sent: {message}");
             }
             else if (path == "/follow" && method == "POST")
             {
                 SetFollowState(true);
-                result = new { ok = true, action = "follow" };
+                result = Dict("ok", true, "action", "follow");
             }
             else if (path == "/stop" && method == "POST")
             {
                 SetFollowState(false);
-                result = new { ok = true, action = "stop" };
+                result = Dict("ok", true, "action", "stop");
             }
             else if (path == "/status" && method == "GET")
             {
                 var player = GameManager.Instance.World?.GetPrimaryPlayer();
                 var pos = player?.position ?? Vector3.zero;
-                result = new
-                {
-                    ok = true,
-                    playerPosition = new { x = pos.x, y = pos.y, z = pos.z },
-                    botCount = GetBotCount()
-                };
+                result = Dict("ok", true,
+                    "playerX", pos.x, "playerY", pos.y, "playerZ", pos.z,
+                    "botCount", GetBotCount());
             }
             else if (path == "/health" && method == "GET")
             {
-                result = new { ok = true, status = "alive" };
+                result = Dict("ok", true, "status", "alive");
             }
             else
             {
                 response.StatusCode = 404;
-                result = new { error = $"Unknown endpoint: {path}" };
+                result = Dict("error", $"Unknown endpoint: {path}");
             }
 
             var json = SerializeJson(result);
@@ -139,7 +141,7 @@ public class BotHttpServer
         catch (Exception ex)
         {
             Log.Error($"[CB] HTTP request error: {ex.Message}");
-            var errorJson = SerializeJson(new { error = ex.Message });
+            var errorJson = SerializeJson(Dict("error", ex.Message));
             var errorBuffer = Encoding.UTF8.GetBytes(errorJson);
             response.StatusCode = 500;
             response.ContentType = "application/json";
@@ -332,6 +334,14 @@ public class BotHttpServer
         if (int.TryParse(value, out int intVal)) return intVal;
         if (float.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float floatVal)) return floatVal;
         return value;
+    }
+
+    private static Dictionary<string, object> Dict(params object[] args)
+    {
+        var d = new Dictionary<string, object>();
+        for (int i = 0; i < args.Length - 1; i += 2)
+            d[args[i].ToString()] = args[i + 1];
+        return d;
     }
 
     private static string GetJsonString(Dictionary<string, object> dict, string key)

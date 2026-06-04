@@ -2,13 +2,10 @@ services:
   bot-server:
     build: .
     ports:
-      - "3000:3000"
+      - "9091:9091"
     environment:
-      - BOT_URL=http://host.docker.internal:8080
-      - LLM_API_URL=https://api.openai.com/v1/chat/completions
-      - LLM_API_KEY=${LLM_API_KEY}
-      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
-      - PORT=3000
+      - BOT_URL=http://host.docker.internal:9090
+      - PORT=9091
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped

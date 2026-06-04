@@ -37,7 +37,6 @@ public class ConsoleCmdSpawnCompanion : ConsoleCmdAbstract
         }
 
         var pos = player.position + player.GetForwardVector() * 3f;
-        pos.y = GameManager.Instance.World.GetHeightAt(pos.x, pos.z) + 1f;
 
         var ecd = new EntityCreationData
         {
@@ -79,10 +78,10 @@ public class ConsoleCmdSpawnCompanion : ConsoleCmdAbstract
         }
     }
 
-    private void KillAllCompanions()
+    public static void KillAll()
     {
         var world = GameManager.Instance.World;
-        var killed = 0;
+        if (world == null) return;
         var ids = new List<int>();
         foreach (var kv in world.Entities.dict)
         {
@@ -92,8 +91,13 @@ public class ConsoleCmdSpawnCompanion : ConsoleCmdAbstract
         foreach (var id in ids)
         {
             world.RemoveEntity(id, EnumRemoveEntityReason.Despawned);
-            killed++;
         }
-        SdtdConsole.Instance.Output($"Removed {killed} companion bot(s).");
+        Log.Out($"[CB] Auto-killed {ids.Count} companion(s) on startup");
+    }
+
+    private void KillAllCompanions()
+    {
+        KillAll();
+        SdtdConsole.Instance.Output("Companion bots removed.");
     }
 }
