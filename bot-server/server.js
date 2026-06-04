@@ -93,6 +93,10 @@ const server = http.createServer(async (req, res) => {
         log(`Reply send error: ${e.message}`);
       });
       json(res, { ok: true, message: `Sent: ${reply}` });
+    } else if (path === "/event" && method === "POST") {
+      const body = await parseBody(req);
+      log(`Event: ${body.type || "?"} -> ${JSON.stringify(body)}`);
+      json(res, { ok: true });
     } else if (path === "/send" && method === "POST") {
       const body = await parseBody(req);
       if (!body.message) {
