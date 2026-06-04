@@ -8,3 +8,4 @@ src/Data/
 related_mods/
 piper_tts-*.tar.gz
 .env
+bot-server/data

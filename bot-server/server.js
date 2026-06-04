@@ -90,6 +90,9 @@ const server = http.createServer(async (req, res) => {
       if (body.type === "chat" && body.message) {
         processChat(body.sender || "?", body.message);
       }
+      if (body.type === "bot_damaged" || body.type === "player_damaged") {
+        processChat("System", body.type === "bot_damaged" ? "Квин получает урон" : "Игрок получает урон");
+      }
       json(res, { ok: true });
 
     } else if (path === "/speak" && method === "POST") {
