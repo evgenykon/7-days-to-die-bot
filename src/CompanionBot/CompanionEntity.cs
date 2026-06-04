@@ -8,6 +8,17 @@ public class CompanionEntity : EntityAlive
     private const float MoveSpeed = 0.1f;
     private const float RetreatSpeed = 0.15f;
     private const float SmoothFactor = 0.12f;
+    private bool _followEnabled = true;
+
+    public void SetFollowMode(bool enabled)
+    {
+        _followEnabled = enabled;
+        if (!enabled)
+        {
+            _smoothDir = Vector3.zero;
+            motion = new Vector3(0f, motion.y, 0f);
+        }
+    }
 
     public override void PostInit()
     {
@@ -17,6 +28,11 @@ public class CompanionEntity : EntityAlive
         PhysicsTransform.gameObject.SetActive(true);
         if (ModelTransform != null)
             ModelTransform.gameObject.SetActive(true);
+
+        if (GameManager.Instance.World.GetPrimaryPlayer() is EntityPlayerLocal)
+        {
+            BotHttpServer.Instance?.Start();
+        }
     }
 
     public override void OnUpdateLive()
@@ -25,6 +41,13 @@ public class CompanionEntity : EntityAlive
 
         var player = GameManager.Instance.World.GetPrimaryPlayer();
         if (player == null || player.IsDead()) return;
+
+        if (!_followEnabled)
+        {
+            speedForward = 0f;
+            speedStrafe = 0f;
+            return;
+        }
 
         var dist = Vector3.Distance(position, player.position);
         if (dist > FollowDist)
