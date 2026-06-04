@@ -4,6 +4,7 @@ const BOT_URL = process.env.BOT_URL || "http://localhost:9090";
 const PIPER_URL = process.env.PIPER_URL || "http://host.docker.internal:9092";
 const LLM_URL = process.env.LLM_URL || "http://host.docker.internal:1234";
 const LLM_MODEL = process.env.LLM_MODEL || "nvidia/nemotron-3-nano-4b";
+const TTS_LENGTH = parseFloat(process.env.TTS_LENGTH || "0.85"); // voice speed (<1 = faster)
 
 const SYSTEM_PROMPT = {
   role: "system",
@@ -146,7 +147,7 @@ const server = http.createServer(async (req, res) => {
         }).catch((e) => {
           log(`Reply send error: ${e.message}`);
         });
-        httpPost(PIPER_URL, "/speak", { text: reply }).then((r) => {
+        httpPost(PIPER_URL, "/speak", { text: reply, length_scale: TTS_LENGTH }).then((r) => {
           log(`TTS triggered: ${JSON.stringify(r)}`);
         }).catch((e) => {
           log(`TTS error: ${e.message}`);
@@ -166,7 +167,7 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       log(`TTS: "${body.text}"`);
-      httpPost(PIPER_URL, "/speak", { text: body.text }).then((r) => {
+      httpPost(PIPER_URL, "/speak", { text: body.text, length_scale: body.length_scale || TTS_LENGTH }).then((r) => {
         log(`TTS done: ${JSON.stringify(r)}`);
       }).catch((e) => {
         log(`TTS error: ${e.message}`);
@@ -208,7 +209,7 @@ server.listen(PORT, () => {
   console.log(`[Server] Bot proxy running on port ${PORT}`);
   console.log(`[Server] Game mod URL: ${BOT_URL}`);
   console.log(`[Server] LLM URL: ${LLM_URL} (model: ${LLM_MODEL})`);
-  console.log(`[Server] Piper URL: ${PIPER_URL}`);
+  console.log(`[Server] Piper URL: ${PIPER_URL} (speed: ${TTS_LENGTH})`);
   console.log(`[Server] GET  /health  - check game connection`);
   console.log(`[Server] GET  /status  - bot status`);
   console.log(`[Server] POST /chat    - receive/send message`);
