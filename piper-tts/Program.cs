@@ -207,20 +207,12 @@ class PiperServer
         try
         {
             if (!File.Exists(wav)) return;
-            if (PlaySound(wav, IntPtr.Zero, SND_FILENAME | SND_ASYNC | SND_NODEFAULT))
+            Log("WAV ready for game to play");
+            ThreadPool.QueueUserWorkItem(_ =>
             {
-                Log("Audio playing");
-                ThreadPool.QueueUserWorkItem(_ =>
-                {
-                    Thread.Sleep(5000);
-                    try { if (File.Exists(wav)) File.Delete(wav); } catch { }
-                });
-            }
-            else
-            {
-                Log("Audio device busy or unavailable");
+                Thread.Sleep(10000);
                 try { if (File.Exists(wav)) File.Delete(wav); } catch { }
-            }
+            });
         }
         catch (Exception ex)
         {

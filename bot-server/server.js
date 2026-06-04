@@ -1,7 +1,7 @@
 const http = require("http");
 
 const BOT_URL = process.env.BOT_URL || "http://localhost:9090";
-const PIPER_URL = process.env.PIPER_URL || "http://host.docker.internal:9092";
+const PIPER_URL = process.env.PIPER_URL || "http://piper-server:9092";
 const LLM_URL = process.env.LLM_URL || "http://host.docker.internal:1234";
 const LLM_MODEL = process.env.LLM_MODEL || "nvidia/nemotron-3-nano-4b";
 const TTS_LENGTH = parseFloat(process.env.TTS_LENGTH || "0.85"); // voice speed (<1 = faster)
@@ -147,8 +147,15 @@ const server = http.createServer(async (req, res) => {
         }).catch((e) => {
           log(`Reply send error: ${e.message}`);
         });
-        httpPost(PIPER_URL, "/speak", { text: reply, length_scale: TTS_LENGTH }).then((r) => {
-          log(`TTS triggered: ${JSON.stringify(r)}`);
+        httpPost(PIPER_URL, "/speak", { text: reply, length_scale: TTS_LENGTH }).then((tts) => {
+          log(`TTS generated (${tts?.wav?.length || 0} chars base64)`);
+          if (tts?.wav) {
+            sendToBot("/play-wav", { wav: tts.wav }).then((r) => {
+              log(`Game play: ${JSON.stringify(r)}`);
+            }).catch((e) => {
+              log(`Game play error: ${e.message}`);
+            });
+          }
         }).catch((e) => {
           log(`TTS error: ${e.message}`);
         });
@@ -167,12 +174,8 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       log(`TTS: "${body.text}"`);
-      httpPost(PIPER_URL, "/speak", { text: body.text, length_scale: body.length_scale || TTS_LENGTH }).then((r) => {
-        log(`TTS done: ${JSON.stringify(r)}`);
-      }).catch((e) => {
-        log(`TTS error: ${e.message}`);
-      });
-      json(res, { ok: true });
+      const tts = await httpPost(PIPER_URL, "/speak", { text: body.text, length_scale: body.length_scale || TTS_LENGTH }).catch((e) => ({ error: e.message }));
+      json(res, tts || { error: "no response" });
     } else if (path === "/send" && method === "POST") {
       const body = await parseBody(req);
       if (!body.message) {

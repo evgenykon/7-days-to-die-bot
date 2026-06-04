@@ -5,7 +5,18 @@ services:
       - "9091:9091"
     environment:
       - BOT_URL=http://host.docker.internal:9090
+      - PIPER_URL=http://piper-server:9092
       - PORT=9091
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      - piper-server
+    restart: unless-stopped
+
+  piper-server:
+    build: ../piper-tts
+    ports:
+      - "9092:9092"
+    environment:
+      - PORT=9092
     restart: unless-stopped

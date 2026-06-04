@@ -73,16 +73,16 @@ public class BotHttpServer
             using (var stream = client.GetStream())
             {
                 var headerBuf = new byte[8192];
-                int totalRead = 0;
+                int headerRead = 0;
                 int headerEnd = -1;
                 int contentLength = 0;
 
                 while (headerEnd < 0)
                 {
-                    int r = stream.Read(headerBuf, totalRead, headerBuf.Length - totalRead);
+                    int r = stream.Read(headerBuf, headerRead, headerBuf.Length - headerRead);
                     if (r <= 0) return;
-                    totalRead += r;
-                    string s = Encoding.UTF8.GetString(headerBuf, 0, totalRead);
+                    headerRead += r;
+                    string s = Encoding.UTF8.GetString(headerBuf, 0, headerRead);
                     headerEnd = s.IndexOf("\r\n\r\n");
                     if (headerEnd >= 0)
                     {
@@ -95,17 +95,30 @@ public class BotHttpServer
                     }
                 }
 
-                int bodyRead = totalRead - headerEnd - 4;
-                while (bodyRead < contentLength)
+                int headerSectionLen = headerEnd + 4;
+                int bodyAlreadyRead = headerRead - headerSectionLen;
+                byte[] bodyBuf;
+                if (contentLength > 0)
                 {
-                    int r = stream.Read(headerBuf, totalRead, headerBuf.Length - totalRead);
-                    if (r <= 0) break;
-                    totalRead += r;
-                    bodyRead = totalRead - headerEnd - 4;
+                    bodyBuf = new byte[contentLength];
+                    if (bodyAlreadyRead > 0)
+                        Array.Copy(headerBuf, headerSectionLen, bodyBuf, 0, bodyAlreadyRead);
+
+                    int totalBodyRead = bodyAlreadyRead;
+                    while (totalBodyRead < contentLength)
+                    {
+                        int r = stream.Read(bodyBuf, totalBodyRead, contentLength - totalBodyRead);
+                        if (r <= 0) break;
+                        totalBodyRead += r;
+                    }
+                }
+                else
+                {
+                    bodyBuf = new byte[0];
                 }
 
-                var raw = Encoding.UTF8.GetString(headerBuf, 0, totalRead);
-                var lines = raw.Split(new[] { "\r\n" }, StringSplitOptions.None);
+                var headerStr = Encoding.UTF8.GetString(headerBuf, 0, headerSectionLen);
+                var lines = headerStr.Split(new[] { "\r\n" }, StringSplitOptions.None);
                 if (lines.Length < 1) return;
 
                 var requestLine = lines[0].Split(' ');
@@ -115,14 +128,14 @@ public class BotHttpServer
                 var path = requestLine[1].ToLower().TrimEnd('/');
                 if (path == "") path = "/";
 
-                string body = headerEnd >= 0 ? raw.Substring(headerEnd + 4) : "";
+                string body = Encoding.UTF8.GetString(bodyBuf);
 
                 int statusCode = 200;
                 string responseBody = HandleRequest(method, path, body, out statusCode);
                 byte[] responseBytes = Encoding.UTF8.GetBytes(
                     $"HTTP/1.1 {statusCode} {(statusCode == 200 ? "OK" : "Error")}\r\n" +
                     "Content-Type: application/json\r\n" +
-                    $"Content-Length: {responseBody.Length}\r\n" +
+                    $"Content-Length: {Encoding.UTF8.GetByteCount(responseBody)}\r\n" +
                     "Connection: close\r\n" +
                     "\r\n" +
                     responseBody);
@@ -174,6 +187,38 @@ public class BotHttpServer
             {
                 statusCode = 200;
                 return SerializeJson(Dict("ok", true, "status", "alive"));
+            }
+            else if (path == "/play-wav" && method == "POST")
+            {
+                statusCode = 200;
+                var data = ParseJson(body);
+                var b64 = GetJsonString(data, "wav");
+                if (string.IsNullOrEmpty(b64))
+                {
+                    statusCode = 400;
+                    return SerializeJson(Dict("error", "wav is required"));
+                }
+                var tmp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"tts_{Guid.NewGuid():N}.wav");
+                ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    try
+                    {
+                        var bytes = Convert.FromBase64String(b64);
+                        System.IO.File.WriteAllBytes(tmp, bytes);
+                        Log.Out($"[CB] Playing TTS ({bytes.Length} bytes)");
+                        using (var player = new System.Media.SoundPlayer(tmp))
+                            player.PlaySync();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error($"[CB] Play WAV error: {ex.Message}");
+                    }
+                    finally
+                    {
+                        try { if (System.IO.File.Exists(tmp)) System.IO.File.Delete(tmp); } catch { }
+                    }
+                });
+                return SerializeJson(Dict("ok", true));
             }
             else
             {

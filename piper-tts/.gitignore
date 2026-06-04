@@ -1,0 +1,14 @@
+*.exe
+*.dll
+*.onnx
+*.ort
+*.tar.gz
+*.log
+*.pid
+*.wav
+espeak-ng-data/
+github/
+voice.*
+piper-server.log
+piper.pid
+test.wav
