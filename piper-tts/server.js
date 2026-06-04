@@ -30,13 +30,13 @@ const server = http.createServer(async (req, res) => {
   try {
     const method = req.method.toUpperCase();
     const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
-    const path = url.pathname.replace(/\/$/, "") || "/";
+    const pname = url.pathname.replace(/\/$/, "") || "/";
 
-    if (path === "/ping" && method === "GET") {
+    if (pname === "/ping" && method === "GET") {
       return json(res, { ok: true });
     }
 
-    if (path !== "/speak" || method !== "POST") {
+    if (pname !== "/speak" || method !== "POST") {
       return json(res, { error: "use POST /speak" }, 404);
     }
 
