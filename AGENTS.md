@@ -133,3 +133,57 @@ taskkill /f /im PiperServer.exe
 - Файлы проекта — в `src/`
 - C# .NET Framework 4.8, сборка через `dotnet build`
 - Никаких внешних зависимостей (SCore, Harmony) — только ванильные Assembly-CSharp и UnityEngine
+
+## Сессия 2026-06-05 — полный рефакторинг
+
+### Что сделано
+- **Разбил server.js на модули**: `lib/http.js`, `lib/llm.js`, `lib/game.js`, `lib/piper.js`, `lib/relationship.js`, `lib/memory.js`, `lib/prompt.js`
+- **Система отношений**: 4 уровня (`незнакомы` → `tentative` → `trusting` → `friendly`), авто-прогресс по количеству сообщений, сентимент (`loyal`/`angry`/`rejecting`)
+- **RAG память**: факты об игроке извлекаются через `[ФАКТ: ключ=значение]` в ответах LLM, хранятся в `/data/memory.json`
+- **История диалога**: последние 20 сообщений сохраняются в `/data/history.json` и отправляются с каждым запросом
+- **Персистентность**: volume `./data:/data` в docker-compose.yml
+- **Piper TTS в Docker**: Linux-контейнер (bookworm-slim, glibc), возвращает base64 WAV
+- **OpenRouter**: заменил локальную LM Studio на API (gpt-4o-mini). Ключ в `.env`
+- **HTTPS fix**: `http.js` теперь использует `https` модуль для https URL
+- **URL fix**: `new URL("./path", base)` вместо `new URL("/path", base)` (абсолютный путь заменял base path)
+- **Биография Квин**: архитектор-дизайнер, киберпанк, потеря группы, чувство вины, страх доверия, стеснение
+- **События урона**: `bot_damaged` + `player_damaged` шлются на `/event`, триггерят LLM
+- **Улучшенное движение**: прыжки через препятствия, спуск за игроком
+- **Chat NRE fix**: `SendChatMessage` — безопасный null-check через ChatHistory (GameManager.GameMessage не существует в V2.6)
+- **Чистка**: удалил C# PiperServer, Windows DLL/binary, дубликаты espeak-ng-data
+
+### Архитектура
+```
+Игра (C# мод) → TCP/JSON → Bot Server (Node.js, Docker, порт 9091) → OpenRouter API (gpt-4o-mini)
+                                      ↓
+                              Piper Server (Docker, порт 9092) → piper Linux binary → base64 WAV
+                                      ↓
+                              Игра (C# мод) → /play-wav (base64) → SoundPlayer.PlaySync()
+```
+
+### Файловая структура bot-server
+```
+bot-server/
+├── server.js          # HTTP роутер, processChat
+├── Dockerfile         # node:22-alpine
+├── docker-compose.yml # bot-server + piper-server
+├── .env               # OPENROUTER_API_KEY, LLM_MODEL
+├── .gitignore
+├── lib/
+│   ├── http.js        # httpPost (http + https), parseBody, json
+│   ├── llm.js         # callLLM (OpenRouter / LM Studio)
+│   ├── game.js        # sendChat, sendPlayWav и т.д.
+│   ├── piper.js       # speak (Piper Docker)
+│   ├── relationship.js # уровни отношений, сентимент
+│   ├── memory.js      # RAG факты + история диалога
+│   └── prompt.js      # динамический system prompt
+└── data/              # volume, персистентные файлы
+```
+
+### Важные замечания
+- `.env` в .gitignore — ключи не коммитятся
+- `data/*.json` в .gitignore — состояние не коммитится
+- Piper TTS только в Docker (Linux), Windows binaries не нужны
+- При смене модели в OpenRouter — поменять `LLM_MODEL` в `.env`
+- LN Studio больше не нужен (OpenRouter API вместо локальной модели)
+- Для билда C# мода: `dotnet build src/CompanionBot -c Release` (игра должна быть закрыта, иначе DLL locked)
