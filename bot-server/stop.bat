@@ -1,4 +1,4 @@
 @echo off
 cd /d "%~dp0"
 echo Stopping Companion Bot Server...
-docker compose down
+taskkill /F /IM bun.exe 2>nul

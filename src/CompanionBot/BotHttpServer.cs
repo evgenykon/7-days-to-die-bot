@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using UnityEngine;
@@ -9,8 +10,8 @@ public class BotHttpServer
 {
     public static BotHttpServer Instance { get; set; }
 
-    private HttpListener _listener;
-    private Thread _listenerThread;
+    private TcpListener _listener;
+    private Thread _acceptThread;
     private readonly int _port;
     private bool _running;
 
@@ -26,131 +27,165 @@ public class BotHttpServer
     {
         if (_running) return;
 
-        Log.Out($"[CB] Start() called, port={_port}");
-        _listener = new HttpListener();
-        _listener.Prefixes.Add($"http://localhost:{_port}/");
-
         try
         {
-            Log.Out("[CB] Starting HttpListener...");
+            _listener = new TcpListener(IPAddress.Any, _port);
             _listener.Start();
-            Log.Out("[CB] HttpListener started OK");
+            _running = true;
+            _acceptThread = new Thread(AcceptLoop) { IsBackground = true };
+            _acceptThread.Start();
+            Log.Out($"[CB] TCP server started on 0.0.0.0:{_port}");
         }
         catch (Exception ex)
         {
-            Log.Error($"[CB] HTTP server start error: {ex.Message}\n{ex.StackTrace}");
-            try
-            {
-                _listener = new HttpListener();
-                _listener.Prefixes.Add($"http://localhost:{_port}/");
-                _listener.Start();
-                Log.Out("[CB] Fallback HttpListener started OK");
-            }
-            catch (Exception ex2)
-            {
-                Log.Error($"[CB] HTTP server fallback error: {ex2.Message}\n{ex2.StackTrace}");
-                return;
-            }
+            Log.Error($"[CB] TCP server start error: {ex.Message}\n{ex.StackTrace}");
         }
-
-        _running = true;
-        _listenerThread = new Thread(ListenLoop) { IsBackground = true };
-        _listenerThread.Start();
-        Log.Out($"[CB] HTTP server started on port {_port}");
     }
 
     public void Stop()
     {
         _running = false;
         try { _listener?.Stop(); } catch { }
-        Log.Out("[CB] HTTP server stopped");
+        Log.Out("[CB] TCP server stopped");
     }
 
-    private void ListenLoop()
+    private void AcceptLoop()
     {
         while (_running)
         {
             try
             {
-                var context = _listener.GetContext();
-                ThreadPool.QueueUserWorkItem(_ => HandleRequest(context));
+                var client = _listener.AcceptTcpClient();
+                ThreadPool.QueueUserWorkItem(_ => HandleClient(client));
             }
             catch (Exception ex)
             {
-                if (_running) Log.Error($"[CB] HTTP listen error: {ex.Message}");
+                if (_running) Log.Error($"[CB] Accept error: {ex.Message}");
             }
         }
     }
 
-    private void HandleRequest(HttpListenerContext context)
+    private void HandleClient(TcpClient client)
     {
-        var request = context.Request;
-        var response = context.Response;
-
         try
         {
-            var path = request.Url.AbsolutePath.ToLower();
-            var method = request.HttpMethod.ToUpper();
+            using (client)
+            using (var stream = client.GetStream())
+            {
+                var headerBuf = new byte[8192];
+                int totalRead = 0;
+                int headerEnd = -1;
+                int contentLength = 0;
 
-            object result = null;
+                while (headerEnd < 0)
+                {
+                    int r = stream.Read(headerBuf, totalRead, headerBuf.Length - totalRead);
+                    if (r <= 0) return;
+                    totalRead += r;
+                    string s = Encoding.UTF8.GetString(headerBuf, 0, totalRead);
+                    headerEnd = s.IndexOf("\r\n\r\n");
+                    if (headerEnd >= 0)
+                    {
+                        foreach (var line in s.Split('\n'))
+                        {
+                            var l = line.Trim().ToLower();
+                            if (l.StartsWith("content-length:"))
+                                int.TryParse(l.Substring(15).Trim(), out contentLength);
+                        }
+                    }
+                }
 
-            if (path == "/chat" && method == "POST")
-            {
-                var body = ReadBody(request);
-                var data = ParseJson(body);
-                var message = GetJsonString(data, "message");
-                var sender = GetJsonString(data, "sender") ?? "Quinn";
+                int bodyRead = totalRead - headerEnd - 4;
+                while (bodyRead < contentLength)
+                {
+                    int r = stream.Read(headerBuf, totalRead, headerBuf.Length - totalRead);
+                    if (r <= 0) break;
+                    totalRead += r;
+                    bodyRead = totalRead - headerEnd - 4;
+                }
 
-                SendChatMessage(sender, message);
-                result = Dict("ok", true, "message", $"Sent: {message}");
-            }
-            else if (path == "/follow" && method == "POST")
-            {
-                SetFollowState(true);
-                result = Dict("ok", true, "action", "follow");
-            }
-            else if (path == "/stop" && method == "POST")
-            {
-                SetFollowState(false);
-                result = Dict("ok", true, "action", "stop");
-            }
-            else if (path == "/status" && method == "GET")
-            {
-                var player = GameManager.Instance.World?.GetPrimaryPlayer();
-                var pos = player?.position ?? Vector3.zero;
-                result = Dict("ok", true,
-                    "playerX", pos.x, "playerY", pos.y, "playerZ", pos.z,
-                    "botCount", GetBotCount());
-            }
-            else if (path == "/health" && method == "GET")
-            {
-                result = Dict("ok", true, "status", "alive");
-            }
-            else
-            {
-                response.StatusCode = 404;
-                result = Dict("error", $"Unknown endpoint: {path}");
-            }
+                var raw = Encoding.UTF8.GetString(headerBuf, 0, totalRead);
+                var lines = raw.Split(new[] { "\r\n" }, StringSplitOptions.None);
+                if (lines.Length < 1) return;
 
-            var json = SerializeJson(result);
-            var buffer = Encoding.UTF8.GetBytes(json);
-            response.ContentType = "application/json";
-            response.ContentLength64 = buffer.Length;
-            response.OutputStream.Write(buffer, 0, buffer.Length);
+                var requestLine = lines[0].Split(' ');
+                if (requestLine.Length < 2) return;
+
+                var method = requestLine[0].ToUpper();
+                var path = requestLine[1].ToLower().TrimEnd('/');
+                if (path == "") path = "/";
+
+                string body = headerEnd >= 0 ? raw.Substring(headerEnd + 4) : "";
+
+                int statusCode = 200;
+                string responseBody = HandleRequest(method, path, body, out statusCode);
+                byte[] responseBytes = Encoding.UTF8.GetBytes(
+                    $"HTTP/1.1 {statusCode} {(statusCode == 200 ? "OK" : "Error")}\r\n" +
+                    "Content-Type: application/json\r\n" +
+                    $"Content-Length: {responseBody.Length}\r\n" +
+                    "Connection: close\r\n" +
+                    "\r\n" +
+                    responseBody);
+
+                stream.Write(responseBytes, 0, responseBytes.Length);
+            }
         }
         catch (Exception ex)
         {
-            Log.Error($"[CB] HTTP request error: {ex.Message}");
-            var errorJson = SerializeJson(Dict("error", ex.Message));
-            var errorBuffer = Encoding.UTF8.GetBytes(errorJson);
-            response.StatusCode = 500;
-            response.ContentType = "application/json";
-            response.ContentLength64 = errorBuffer.Length;
-            response.OutputStream.Write(errorBuffer, 0, errorBuffer.Length);
+            Log.Error($"[CB] Client error: {ex.Message}");
         }
-        finally
+    }
+
+    private string HandleRequest(string method, string path, string body, out int statusCode)
+    {
+        try
         {
-            try { response.OutputStream.Close(); } catch { }
+            if (path == "/chat" && method == "POST")
+            {
+                statusCode = 200;
+                var data = ParseJson(body);
+                var message = GetJsonString(data, "message");
+                var sender = GetJsonString(data, "sender") ?? "Quinn";
+                SendChatMessage(sender, message);
+                return SerializeJson(Dict("ok", true, "message", $"Sent: {message}"));
+            }
+            else if (path == "/follow" && method == "POST")
+            {
+                statusCode = 200;
+                SetFollowState(true);
+                return SerializeJson(Dict("ok", true, "action", "follow"));
+            }
+            else if (path == "/stop" && method == "POST")
+            {
+                statusCode = 200;
+                SetFollowState(false);
+                return SerializeJson(Dict("ok", true, "action", "stop"));
+            }
+            else if (path == "/status" && method == "GET")
+            {
+                statusCode = 200;
+                var player = GameManager.Instance.World?.GetPrimaryPlayer();
+                var pos = player?.position ?? Vector3.zero;
+                return SerializeJson(Dict("ok", true,
+                    "playerX", pos.x, "playerY", pos.y, "playerZ", pos.z,
+                    "botCount", GetBotCount()));
+            }
+            else if (path == "/health" && method == "GET")
+            {
+                statusCode = 200;
+                return SerializeJson(Dict("ok", true, "status", "alive"));
+            }
+            else
+            {
+                statusCode = 404;
+                return SerializeJson(Dict("error", $"Unknown endpoint: {path}"));
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"[CB] Request error: {ex.Message}");
+            statusCode = 500;
+            return SerializeJson(Dict("error", ex.Message));
         }
     }
 
@@ -174,7 +209,7 @@ public class BotHttpServer
                             var chatOutput = child as XUiC_ChatOutput;
                             if (chatOutput != null)
                             {
-                                chatOutput.addMessage(EnumGameMessages.Chat, EChatType.Global, EChatDirection.None, sender, message, "");
+                                chatOutput.addMessage(EnumGameMessages.Chat, EChatType.Global, EChatDirection.None, message, sender, "");
                                 return;
                             }
                         }
@@ -198,9 +233,7 @@ public class BotHttpServer
             foreach (var kv in world.Entities.dict)
             {
                 if (kv.Value is CompanionEntity bot)
-                {
                     bot.SetFollowMode(follow);
-                }
             }
         }
         catch (Exception ex)
@@ -215,23 +248,27 @@ public class BotHttpServer
         {
             var world = GameManager.Instance.World;
             if (world == null) return 0;
-
             int count = 0;
             foreach (var kv in world.Entities.dict)
-            {
                 if (kv.Value is CompanionEntity) count++;
-            }
             return count;
         }
         catch { return 0; }
     }
 
-    private static string ReadBody(HttpListenerRequest request)
+    private static Dictionary<string, object> Dict(params object[] args)
     {
-        using (var reader = new System.IO.StreamReader(request.InputStream, request.ContentEncoding))
-        {
-            return reader.ReadToEnd();
-        }
+        var d = new Dictionary<string, object>();
+        for (int i = 0; i < args.Length - 1; i += 2)
+            d[args[i].ToString()] = args[i + 1];
+        return d;
+    }
+
+    private static string GetJsonString(Dictionary<string, object> dict, string key)
+    {
+        if (dict != null && dict.TryGetValue(key, out var val) && val is string s)
+            return s;
+        return null;
     }
 
     private static string SerializeJson(object obj)
@@ -283,15 +320,12 @@ public class BotHttpServer
     {
         var result = new Dictionary<string, object>();
         if (string.IsNullOrEmpty(json)) return result;
-
         json = json.Trim().TrimStart('{').TrimEnd('}');
         var pairs = SplitJsonPairs(json);
-
         foreach (var pair in pairs)
         {
             var colonIndex = pair.IndexOf(':');
             if (colonIndex < 0) continue;
-
             var key = pair.Substring(0, colonIndex).Trim().Trim('"');
             var value = pair.Substring(colonIndex + 1).Trim();
             result[key] = ParseJsonValue(value);
@@ -302,10 +336,8 @@ public class BotHttpServer
     private static List<string> SplitJsonPairs(string json)
     {
         var pairs = new List<string>();
-        int depth = 0;
-        int start = 0;
+        int depth = 0, start = 0;
         bool inString = false;
-
         for (int i = 0; i < json.Length; i++)
         {
             if (json[i] == '"') inString = !inString;
@@ -318,9 +350,7 @@ public class BotHttpServer
                 start = i + 1;
             }
         }
-        if (start < json.Length)
-            pairs.Add(json.Substring(start));
-
+        if (start < json.Length) pairs.Add(json.Substring(start));
         return pairs;
     }
 
@@ -334,20 +364,5 @@ public class BotHttpServer
         if (int.TryParse(value, out int intVal)) return intVal;
         if (float.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float floatVal)) return floatVal;
         return value;
-    }
-
-    private static Dictionary<string, object> Dict(params object[] args)
-    {
-        var d = new Dictionary<string, object>();
-        for (int i = 0; i < args.Length - 1; i += 2)
-            d[args[i].ToString()] = args[i + 1];
-        return d;
-    }
-
-    private static string GetJsonString(Dictionary<string, object> dict, string key)
-    {
-        if (dict != null && dict.TryGetValue(key, out var val) && val is string s)
-            return s;
-        return null;
     }
 }

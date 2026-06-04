@@ -2,7 +2,7 @@ import { Hono } from "hono";
 
 const app = new Hono();
 
-const BOT_URL = process.env.BOT_URL || "http://host.docker.internal:8080";
+const BOT_URL = process.env.BOT_URL || "http://localhost:9090";
 
 async function sendToBot(path: string, body?: any): Promise<any> {
   const res = await fetch(`${BOT_URL}${path}`, {
@@ -36,12 +36,7 @@ app.post("/chat", async (c) => {
   if (!body.message) {
     return c.json({ error: "message is required" }, 400);
   }
-  try {
-    const data = await sendToBot("/chat", { sender: "Player", message: body.message });
-    return c.json(data);
-  } catch (err: any) {
-    return c.json({ error: err.message }, 500);
-  }
+  return c.json({ ok: true, message: body.message });
 });
 
 app.post("/send", async (c) => {

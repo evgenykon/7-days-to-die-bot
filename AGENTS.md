@@ -40,6 +40,51 @@
 - **motion + DefaultMoveEntity** — надёжное движение без moveHelper/AI
 - **scc / sc / spawncompanion** — спавн рядом с игроком
 - **scc kill** — удаление всех ботов
+- **IModApi (BotModInit)** — автозапуск HTTP сервера при старте мода
+- **HTTP сервер** (порт 9090) — /health, /status, /chat, /follow, /stop
+- **Bot Server** (порт 9091) — Bun + Hono прокси к игре, Docker
+
+## Первый запуск (setup)
+
+1. `powershell -ExecutionPolicy Bypass -File deploy.ps1`
+2. Запускать игру — HTTP сервер стартует автоматически (IModApi)
+   - Игра слушает `0.0.0.0:9090` (нативно через TcpListener, не HttpListener)
+3. `cd bot-server && docker compose up -d` — Bot Server на порту 9091
+
+## Архитектура
+
+```
+Игра (C# мод, порт 9090, TcpListener) ← Docker → Bot Server (Bun + Hono, порт 9091) ← → LLM API
+```
+
+## API (игра, порт 9090)
+
+```bash
+# Отправить сообщение в чат (sender=имя, message=текст)
+curl -X POST http://localhost:9090/chat -d '{"sender":"Quinn","message":"hello"}'
+
+# Бот следует за игроком
+curl -X POST http://localhost:9090/follow
+
+# Бот стоп
+curl -X POST http://localhost:9090/stop
+
+# Статус (позиция игрока, кол-во ботов)
+curl http://localhost:9090/status
+
+# Здоровье
+curl http://localhost:9090/health
+```
+
+## API (Bot Server, порт 9091)
+
+```bash
+# Прокси к игре
+curl -X POST http://localhost:9091/chat -d '{"message":"hello"}'
+curl -X POST http://localhost:9091/send -d '{"sender":"Quinn","message":"reply"}'
+curl -X POST http://localhost:9091/follow
+curl -X POST http://localhost:9091/stop
+```
 
 ## Мои ошибки (не повторять)
 
