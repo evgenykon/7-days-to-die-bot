@@ -14,6 +14,50 @@ function log(msg) {
   console.log(`[${new Date().toISOString()}] ${msg}`);
 }
 
+function processChat(sender, message) {
+  log(`Chat from ${sender}: "${message}"`);
+  rel.processMessage(message);
+
+  const history = mem.getHistory();
+  const msgs = [prompt.build(), ...history, { role: "user", content: message }];
+
+  callLLM(msgs).then((raw) => {
+    const facts = raw.match(/\[ФАКТ:\s*([^=]+)=([^\]]+)\]/g);
+    let reply = raw;
+    if (facts) {
+      facts.forEach((f) => {
+        const m = f.match(/\[ФАКТ:\s*([^=]+)=([^\]]+)\]/);
+        if (m) mem.addFact(m[1].trim(), m[2].trim());
+      });
+      reply = raw.replace(/\[ФАКТ:[^\]]*\]\s*/g, "").trim();
+    }
+    mem.addMessage("user", message);
+    mem.addMessage("assistant", reply);
+    log(`LLM reply: "${reply}" (level=${rel.getLevelName()}, sentiment=${rel.getSentiment()})`);
+
+    sendChat("Quinn", reply).then((r) => {
+      log(`Reply sent to game: ${JSON.stringify(r)}`);
+    }).catch((e) => {
+      log(`Reply send error: ${e.message}`);
+    });
+
+    speak(reply).then((tts) => {
+      log(`TTS generated (${tts?.wav?.length || 0} chars)`);
+      if (tts?.wav) {
+        sendPlayWav(tts.wav).then((r) => {
+          log(`Game play: ${JSON.stringify(r)}`);
+        }).catch((e) => {
+          log(`Game play error: ${e.message}`);
+        });
+      }
+    }).catch((e) => {
+      log(`TTS error: ${e.message}`);
+    });
+  }).catch((e) => {
+    log(`LLM error: ${e.message}`);
+  });
+}
+
 const server = http.createServer(async (req, res) => {
   const method = req.method.toUpperCase();
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
@@ -36,59 +80,16 @@ const server = http.createServer(async (req, res) => {
 
     } else if (path === "/chat" && method === "POST") {
       const body = await parseBody(req);
-      if (!body.message) {
-        json(res, { error: "message is required" }, 400);
-        return;
-      }
-
-      log(`Chat from ${body.sender || "?"}: "${body.message}"`);
-
-      rel.processMessage(body.message);
-
-      const history = mem.getHistory();
-      const messages = [prompt.build(), ...history, { role: "user", content: body.message }];
-
-      callLLM(messages).then((raw) => {
-        const facts = raw.match(/\[ФАКТ:\s*([^=]+)=([^\]]+)\]/g);
-        let reply = raw;
-        if (facts) {
-          facts.forEach((f) => {
-            const m = f.match(/\[ФАКТ:\s*([^=]+)=([^\]]+)\]/);
-            if (m) mem.addFact(m[1].trim(), m[2].trim());
-          });
-          reply = raw.replace(/\[ФАКТ:[^\]]*\]\s*/g, "").trim();
-        }
-        mem.addMessage("user", body.message);
-        mem.addMessage("assistant", reply);
-        log(`LLM reply: "${reply}" (level=${rel.getLevelName()}, sentiment=${rel.getSentiment()})`);
-
-        sendChat("Quinn", reply).then((r) => {
-          log(`Reply sent to game: ${JSON.stringify(r)}`);
-        }).catch((e) => {
-          log(`Reply send error: ${e.message}`);
-        });
-
-        speak(reply).then((tts) => {
-          log(`TTS generated (${tts?.wav?.length || 0} chars)`);
-          if (tts?.wav) {
-            sendPlayWav(tts.wav).then((r) => {
-              log(`Game play: ${JSON.stringify(r)}`);
-            }).catch((e) => {
-              log(`Game play error: ${e.message}`);
-            });
-          }
-        }).catch((e) => {
-          log(`TTS error: ${e.message}`);
-        });
-      }).catch((e) => {
-        log(`LLM error: ${e.message}`);
-      });
-
+      if (!body.message) { json(res, { error: "message is required" }, 400); return; }
+      processChat(body.sender || "?", body.message);
       json(res, { ok: true, message: "Processing..." });
 
     } else if (path === "/event" && method === "POST") {
       const body = await parseBody(req);
-      log(`Event: ${body.type || "?"} -> ${JSON.stringify(body)}`);
+      log(`Event: ${body.type || "?"}`);
+      if (body.type === "chat" && body.message) {
+        processChat(body.sender || "?", body.message);
+      }
       json(res, { ok: true });
 
     } else if (path === "/speak" && method === "POST") {
