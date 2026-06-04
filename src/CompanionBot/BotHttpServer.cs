@@ -400,4 +400,19 @@ public class BotHttpServer
         if (float.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float floatVal)) return floatVal;
         return value;
     }
+
+    public static void ForwardEvent(string eventType, string fields)
+    {
+        try
+        {
+            var json = $"{{\"type\":\"{EscapeJson(eventType)}\",{fields}}}";
+            using (var client = new System.Net.WebClient())
+            {
+                client.Headers[System.Net.HttpRequestHeader.ContentType] = "application/json";
+                client.UploadString("http://localhost:9091/event", "POST", json);
+            }
+        }
+        catch (System.Exception ex) { Log.Out($"[CB] Forward error ({eventType}): {ex.Message}"); }
+    }
+
 }

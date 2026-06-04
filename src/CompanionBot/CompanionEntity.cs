@@ -3,6 +3,8 @@ using UnityEngine;
 public class CompanionEntity : EntityAlive
 {
     private Vector3 _smoothDir;
+    private float _lastHealth = -1f;
+    private float _lastPlayerHealth = -1f;
     private const float FollowDist = 1.5f;
     private const float MinDist = 1.0f;
     private const float MoveSpeed = 0.1f;
@@ -68,17 +70,52 @@ public class CompanionEntity : EntityAlive
             motion = new Vector3(0f, motion.y, 0f);
         }
 
-        var yDiff = player.position.y - position.y;
-        if (yDiff > 0.5f)
+        var horizSpeed = new Vector3(motion.x, 0f, motion.z).magnitude;
+        if (horizSpeed > 0.01f && motion.y < 0.5f)
         {
-            if (Physics.Raycast(position, Vector3.down, out _, 1.2f))
+            var fwd = new Vector3(motion.x, 0f, motion.z).normalized;
+            var origin = position + Vector3.up * 0.3f;
+            var rayDist = Mathf.Max(0.5f, horizSpeed * 8f);
+            if (Physics.Raycast(origin, fwd, rayDist))
             {
-                motion.y = 7.5f;
+                if (Physics.Raycast(position, Vector3.down, 1.5f))
+                    motion.y = 8f;
             }
         }
 
-        speedForward = new Vector3(motion.x, 0f, motion.z).magnitude;
+        var yDiff = player.position.y - position.y;
+        if (yDiff > 0.8f && motion.y < 1f)
+        {
+            if (Physics.Raycast(position, Vector3.down, out _, 1.5f))
+                motion.y = 8f;
+        }
+        else if (yDiff < -0.8f && motion.y > -1f)
+        {
+            motion.y = -5f;
+        }
+
+        speedForward = horizSpeed;
         speedStrafe = 0f;
+
+        var h = Health;
+        if (_lastHealth < 0f) _lastHealth = h;
+        if (h < _lastHealth)
+        {
+            var dmg = _lastHealth - h;
+            _lastHealth = h;
+            BotHttpServer.ForwardEvent("bot_damaged", $"\"damage\":{dmg},\"health\":{h},\"maxHealth\":{GetMaxHealth()}");
+        }
+        else if (h > _lastHealth) _lastHealth = h;
+
+        var ph = player.Health;
+        if (_lastPlayerHealth < 0f) _lastPlayerHealth = ph;
+        if (ph < _lastPlayerHealth)
+        {
+            var dmg = _lastPlayerHealth - ph;
+            _lastPlayerHealth = ph;
+            BotHttpServer.ForwardEvent("player_damaged", $"\"damage\":{dmg},\"health\":{ph},\"maxHealth\":{player.GetMaxHealth()}");
+        }
+        else if (ph > _lastPlayerHealth) _lastPlayerHealth = ph;
     }
 
     public override void OnUpdatePosition(float _partialTicks)
