@@ -238,34 +238,24 @@ public class BotHttpServer
     {
         try
         {
-            var player = GameManager.Instance.World.GetPrimaryPlayer() as EntityPlayerLocal;
-            if (player == null) return;
-
-            var xui = player.PlayerUI.xui;
-            foreach (var wg in xui.WindowGroups)
+            var p = GameManager.Instance.World?.GetPrimaryPlayer();
+            if (p == null) return;
+            foreach (var wg in ((EntityPlayerLocal)p).PlayerUI.xui.WindowGroups)
             {
-                if (wg.ID == "chatoutput")
+                if (wg?.ID != "chatoutput") continue;
+                var list = wg.Controller?.children;
+                if (list == null) continue;
+                foreach (var c in list)
                 {
-                    var children = wg.Controller.children;
-                    if (children != null)
+                    if (c is XUiC_ChatOutput chat)
                     {
-                        foreach (var child in children)
-                        {
-                            var chatOutput = child as XUiC_ChatOutput;
-                            if (chatOutput != null)
-                            {
-                                chatOutput.addMessage(EnumGameMessages.Chat, EChatType.Global, EChatDirection.None, message, sender, "");
-                                return;
-                            }
-                        }
+                        chat.addMessage(EnumGameMessages.Chat, EChatType.Global, EChatDirection.None, message ?? "", sender ?? "", null);
+                        return;
                     }
                 }
             }
         }
-        catch (Exception ex)
-        {
-            Log.Error($"[CB] Chat send error: {ex.Message}");
-        }
+        catch { }
     }
 
     public static void SetFollowState(bool follow)

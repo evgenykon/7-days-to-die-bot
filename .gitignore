@@ -7,3 +7,4 @@ src/Data/
 .vs/
 related_mods/
 piper_tts-*.tar.gz
+.env
