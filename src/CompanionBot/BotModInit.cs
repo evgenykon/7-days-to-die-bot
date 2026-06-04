@@ -2,12 +2,12 @@ using System;
 using System.Net;
 using System.Text;
 using System.Threading;
-using UnityEngine;
 
 public class BotModInit : IModApi
 {
     private const string BotServerEventUrl = "http://localhost:9091/event";
 
+    private static bool _lastDaytime = true;
     public void InitMod(Mod _modInstance)
     {
         Log.Out("[CB] InitMod called via IModApi");
@@ -16,7 +16,6 @@ public class BotModInit : IModApi
         server.Start();
 
         ModEvents.ChatMessage.RegisterHandler(OnChatMessage);
-        ModEvents.GameMessage.RegisterHandler(OnGameMessage);
         ModEvents.EntityKilled.RegisterHandler(OnEntityKilled);
         ModEvents.PlayerSpawnedInWorld.RegisterHandler(OnPlayerSpawnedInWorld);
         ModEvents.PlayerJoinedGame.RegisterHandler(OnPlayerJoinedGame);
@@ -30,6 +29,41 @@ public class BotModInit : IModApi
             Log.Out("[CB] World found, killing companions...");
             ConsoleCmdSpawnCompanion.KillAll();
             Log.Out("[CB] Kill all done");
+            StartWorldPoller();
+        }) { IsBackground = true }.Start();
+    }
+
+    private static void StartWorldPoller()
+    {
+        new Thread(() =>
+        {
+            var world = GameManager.Instance.World;
+            _lastDaytime = world.IsDaytime();
+            Log.Out($"[CB] Poller started, initial daytime={_lastDaytime}");
+
+            while (true)
+            {
+                try
+                {
+                    Thread.Sleep(5000);
+                    world = GameManager.Instance.World;
+                    if (world == null) continue;
+
+                    var isDaytime = world.IsDaytime();
+                    if (isDaytime != _lastDaytime)
+                    {
+                        _lastDaytime = isDaytime;
+                        var timeStr = isDaytime ? "day" : "night";
+                        Log.Out($"[CB] Time changed to {timeStr}");
+                        ForwardEvent("time_change", $"\"time\":\"{timeStr}\"");
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    Log.Error($"[CB] Poller error: {ex.Message}");
+                }
+            }
         }) { IsBackground = true }.Start();
     }
 
@@ -42,12 +76,6 @@ public class BotModInit : IModApi
         if (name == "Quinn") return ModEvents.EModEventResult.Continue;
 
         ForwardEvent("chat", $"\"sender\":\"{EscapeJson(name)}\",\"message\":\"{EscapeJson(msg)}\"");
-        return ModEvents.EModEventResult.Continue;
-    }
-
-    private ModEvents.EModEventResult OnGameMessage(ref ModEvents.SGameMessageData data)
-    {
-        ForwardEvent("game_message", $"\"type\":{(int)data.MessageType},\"mainName\":\"{EscapeJson(data.MainName)}\",\"secondaryName\":\"{EscapeJson(data.SecondaryName)}\"");
         return ModEvents.EModEventResult.Continue;
     }
 
@@ -73,7 +101,7 @@ public class BotModInit : IModApi
         ForwardEvent("player_disconnected", "\"placeholder\":true");
     }
 
-    private void ForwardEvent(string eventType, string fields)
+    private static void ForwardEvent(string eventType, string fields)
     {
         ThreadPool.QueueUserWorkItem(_ =>
         {

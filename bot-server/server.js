@@ -1,6 +1,34 @@
 const http = require("http");
 
 const BOT_URL = process.env.BOT_URL || "http://localhost:9090";
+const PIPER_URL = process.env.PIPER_URL || "http://host.docker.internal:9092";
+
+function httpPost(baseUrl, path, body) {
+  return new Promise((resolve, reject) => {
+    const bodyStr = body ? JSON.stringify(body) : "";
+    const url = new URL(path, baseUrl);
+    const options = {
+      hostname: url.hostname,
+      port: url.port,
+      path: url.pathname,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(bodyStr),
+      },
+    };
+    const req = http.request(options, (res) => {
+      let data = "";
+      res.on("data", (chunk) => (data += chunk));
+      res.on("end", () => {
+        try { resolve(JSON.parse(data)); } catch { resolve(data); }
+      });
+    });
+    req.on("error", reject);
+    if (body) req.write(bodyStr);
+    req.end();
+  });
+}
 
 function sendToBot(path, body) {
   return new Promise((resolve, reject) => {
@@ -92,10 +120,28 @@ const server = http.createServer(async (req, res) => {
       }).catch((e) => {
         log(`Reply send error: ${e.message}`);
       });
+      httpPost(PIPER_URL, "/speak", { text: reply }).then((r) => {
+        log(`TTS triggered: ${JSON.stringify(r)}`);
+      }).catch((e) => {
+        log(`TTS error: ${e.message}`);
+      });
       json(res, { ok: true, message: `Sent: ${reply}` });
     } else if (path === "/event" && method === "POST") {
       const body = await parseBody(req);
       log(`Event: ${body.type || "?"} -> ${JSON.stringify(body)}`);
+      json(res, { ok: true });
+    } else if (path === "/speak" && method === "POST") {
+      const body = await parseBody(req);
+      if (!body.text) {
+        json(res, { error: "text is required" }, 400);
+        return;
+      }
+      log(`TTS: "${body.text}"`);
+      httpPost(PIPER_URL, "/speak", { text: body.text }).then((r) => {
+        log(`TTS done: ${JSON.stringify(r)}`);
+      }).catch((e) => {
+        log(`TTS error: ${e.message}`);
+      });
       json(res, { ok: true });
     } else if (path === "/send" && method === "POST") {
       const body = await parseBody(req);

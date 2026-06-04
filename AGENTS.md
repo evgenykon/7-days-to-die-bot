@@ -42,19 +42,25 @@
 - **scc kill** — удаление всех ботов
 - **IModApi (BotModInit)** — автозапуск HTTP сервера при старте мода
 - **HTTP сервер** (порт 9090) — /health, /status, /chat, /follow, /stop
-- **Bot Server** (порт 9091) — Bun + Hono прокси к игре, Docker
+- **Bot Server** (порт 9091) — Node.js прокси к игре, Docker
+- **PiperServer** (порт 9092) — C# .NET 4.8, TTS через piper.exe, запуск через run.bat
+- **stop.bat / taskkill** — остановка PiperServer
 
 ## Первый запуск (setup)
 
 1. `powershell -ExecutionPolicy Bypass -File deploy.ps1`
 2. Запускать игру — HTTP сервер стартует автоматически (IModApi)
    - Игра слушает `0.0.0.0:9090` (нативно через TcpListener, не HttpListener)
-3. `cd bot-server && docker compose up -d` — Bot Server на порту 9091
+3. `.\start-all.bat` — запускает Bot Server (Docker) + PiperServer
+   - Bot Server: порт 9091
+   - PiperServer: порт 9092
 
 ## Архитектура
 
 ```
-Игра (C# мод, порт 9090, TcpListener) ← Docker → Bot Server (Bun + Hono, порт 9091) ← → LLM API
+Игра (C# мод, порт 9090, TcpListener) ← Docker → Bot Server (Node.js, порт 9091) ← → LLM API
+   ↑
+   └── PiperServer (C#, порт 9092) → piper.exe → TTS (колонки)
 ```
 
 ## API (игра, порт 9090)
@@ -84,6 +90,22 @@ curl -X POST http://localhost:9091/chat -d '{"message":"hello"}'
 curl -X POST http://localhost:9091/send -d '{"sender":"Quinn","message":"reply"}'
 curl -X POST http://localhost:9091/follow
 curl -X POST http://localhost:9091/stop
+```
+
+## API (PiperServer, порт 9092)
+
+```bash
+# Проверка здоровья
+curl http://localhost:9092/ping
+
+# Синтез речи (WAV → колонки)
+curl -X POST http://localhost:9092/speak -d '{"text":"привет"}'
+
+# Параметры голоса (опционально)
+curl -X POST http://localhost:9092/speak -d '{"text":"hello","length_scale":1.2,"noise_scale":0.6,"noise_w":0.9}'
+
+# Остановить PiperServer
+taskkill /f /im PiperServer.exe
 ```
 
 ## Мои ошибки (не повторять)
