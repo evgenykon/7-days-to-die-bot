@@ -6,3 +6,4 @@ docker compose up -d
 echo Bot Server running on port 9091
 echo Piper Server running on port 9092
 echo === All services started ===
+pause
