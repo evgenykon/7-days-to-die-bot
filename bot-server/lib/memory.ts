@@ -26,6 +26,7 @@ interface SelfEntry {
 let facts: FactEntry[] = [];
 let history: HistoryEntry[] = [];
 let selfInfo: SelfEntry | null = null;
+let lastActivity: number = Date.now();
 
 function load(): void {
   try {
@@ -97,6 +98,14 @@ export function getSelf(): string | null {
 export function clearSelf(): void {
   selfInfo = null;
   save();
+}
+
+export function updateActivity(): void {
+  lastActivity = Date.now();
+}
+
+export function getLastActivity(): number {
+  return lastActivity;
 }
 
 export function resetAll(): void {

@@ -4,7 +4,7 @@ import { sendChat, sendPlayWav, sendFollow, sendStop, getHealth, getStatus } fro
 import { speak } from "./lib/piper";
 import * as rel from "./lib/relationship";
 import * as mem from "./lib/memory";
-import { build, ensureSelf } from "./lib/prompt";
+import { build, buildEvent, ensureSelf } from "./lib/prompt";
 
 const app = new Hono();
 const PIPER_URL = process.env.PIPER_URL || "http://localhost:9092";
@@ -27,6 +27,30 @@ function ensureSelfAsync(): Promise<void> {
   return _selfPromise;
 }
 
+async function processEvent(description: string): Promise<void> {
+  await ensureSelfAsync();
+  if (!mem.getSelf()) {
+    _selfPromise = null;
+    await ensureSelfAsync();
+  }
+  mem.updateActivity();
+  log(`Event: "${description}"`);
+  if (!mem.getSelf()) {
+    log(`[Event] No self — skipping`);
+    return;
+  }
+  const systemPrompt = await buildEvent(description);
+  log(`[Event] System prompt (${systemPrompt.content.length}ch): ${systemPrompt.content.substring(0, 200).replace(/\n/g, "\\n")}...`);
+  const raw = await callLLM([systemPrompt, { role: "user", content: "Что ты чувствуешь?" }]);
+  let reply = raw.trim();
+  if (!reply) { log(`[Event] Empty LLM reply`); return; }
+  log(`Event reply: "${reply}"`);
+  sendChat("Путница", reply).catch((e: Error) => log(`Event send error: ${e.message}`));
+  speak(reply).then((tts) => {
+    if (tts?.wav) sendPlayWav(tts.wav).catch(() => {});
+  }).catch(() => {});
+}
+
 async function processChat(sender: string, message: string): Promise<void> {
   await ensureSelfAsync();
   if (!mem.getSelf()) {
@@ -43,6 +67,7 @@ async function processChat(sender: string, message: string): Promise<void> {
     sendChat("Путница", "..." ).catch(() => {});
     return;
   }
+  mem.updateActivity();
   const systemPrompt = await build();
   const llmMsgs = [systemPrompt, ...history.map(h => ({ role: h.role as "user" | "assistant", content: h.content })), { role: "user" as const, content: message }];
 
@@ -117,7 +142,7 @@ app.post("/chat", async (c) => {
 
 app.post("/event", async (c) => {
   const body = await c.req.json<{
-    type?: string; sender?: string; message?: string;
+    type?: string; sender?: string; message?: string; time?: string;
     damage?: number; health?: number; maxHealth?: number;
     killed?: string; killer?: string;
   }>();
@@ -127,10 +152,10 @@ app.post("/event", async (c) => {
     processChat(body.sender || "?", body.message);
   }
   if (body.type === "bot_damaged") {
-    processChat("System", `Ты получаешь урон: ${body.damage || "?"} хп, у тебя осталось ${body.health || "?"}/${body.maxHealth || "?"}`);
+    processEvent(`Я получаю урон: ${body.damage || "?"} хп, у меня осталось ${body.health || "?"}/${body.maxHealth || "?"}`);
   }
   if (body.type === "player_damaged") {
-    processChat("System", `Игрок получает урон: ${body.damage || "?"} хп, осталось ${body.health || "?"}/${body.maxHealth || "?"}`);
+    processEvent(`Игрок получает урон: ${body.damage || "?"} хп, осталось ${body.health || "?"}/${body.maxHealth || "?"}`);
   }
   if (body.type === "bot_spawned") {
     log("[Event] Бот заспавнен — генерирую новое самосознание");
@@ -140,15 +165,19 @@ app.post("/event", async (c) => {
     });
   }
 
+  if (body.type === "time_change") {
+    processEvent(body.time === "day" ? "Наступило утро, светает. Ты чувствуешь облегчение." : "Наступила ночь, темнеет. Ты чувствуешь тревогу.");
+  }
+
   if (body.type === "entity_killed") {
     if (body.killed === "companionBot") {
       log("[Event] Бот погиб — уничтожаю личность и его историю");
-      processChat("System", "Ты чувствуешь дикую слабость, темнеет в глазах. Твоё тело больше не слушается — ты умираешь.").then(() => {
+      processEvent("Я чувствую дикую слабость, темнеет в глазах. Моё тело больше не слушается — я умираю.").then(() => {
         mem.resetAll();
         rel.reset();
       });
     } else if (body.killer === "player" && body.killed && body.killed !== "companionBot") {
-      processChat("System", `Игрок убил врага: ${body.killed}. Скажи что-то ободряющее, поддержи игрока.`);
+      processEvent(`Игрок убил врага: ${body.killed}. Ты радуешься и поддерживаешь его.`);
     }
   }
 
@@ -208,6 +237,15 @@ app.post("/speak", async (c) => {
   const tts = await speak(body.text, body.length_scale).catch((e: Error) => ({ error: e.message }));
   return c.json(tts || { error: "no response" });
 });
+
+const IDLE_MINUTES = parseFloat(process.env.IDLE_MINUTES || "5");
+setInterval(() => {
+  const idle = (Date.now() - mem.getLastActivity()) / 60000;
+  if (idle > IDLE_MINUTES && mem.getSelf()) {
+    log(`[Idle] ${idle.toFixed(1)} мин без диалога — инициирую разговор`);
+    processChat("System", "Ты давно молчишь. Спроси что-нибудь или скажи что думаешь о текущей обстановке.");
+  }
+}, 30000);
 
 const PORT = parseInt(process.env.PORT || "9091");
 

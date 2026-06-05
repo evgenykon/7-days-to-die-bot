@@ -206,6 +206,7 @@ public class BotHttpServer
                         var bytes = Convert.FromBase64String(b64);
                         System.IO.File.WriteAllBytes(tmp, bytes);
                         Log.Out($"[CB] Playing TTS ({bytes.Length} bytes)");
+                        SetTalking(true);
                         using (var player = new System.Media.SoundPlayer(tmp))
                             player.PlaySync();
                     }
@@ -215,6 +216,7 @@ public class BotHttpServer
                     }
                     finally
                     {
+                        SetTalking(false);
                         try { if (System.IO.File.Exists(tmp)) System.IO.File.Delete(tmp); } catch { }
                     }
                 });
@@ -256,6 +258,24 @@ public class BotHttpServer
             }
         }
         catch { }
+    }
+
+    public static void SetTalking(bool talking)
+    {
+        try
+        {
+            var world = GameManager.Instance.World;
+            if (world == null) return;
+            foreach (var kv in world.Entities.dict)
+            {
+                if (kv.Value is CompanionEntity bot)
+                    bot.SetTalking(talking);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"[CB] Talking state error: {ex.Message}");
+        }
     }
 
     public static void SetFollowState(bool follow)

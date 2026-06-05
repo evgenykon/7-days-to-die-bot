@@ -13,6 +13,15 @@ public class CompanionEntity : EntityAlive
     private const float SmoothFactor = 0.12f;
     private bool _followEnabled = false;
 
+    public void SetTalking(bool talking)
+    {
+        var anim = GetComponentInChildren<Animator>();
+        if (anim != null && anim.isActiveAndEnabled)
+        {
+            anim.SetBool("Talking", talking);
+        }
+    }
+
     public void SetFollowMode(bool enabled)
     {
         _followEnabled = enabled;

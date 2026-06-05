@@ -28,7 +28,12 @@ dotnet build src\CompanionBot\CompanionBot.csproj
 
 ```
 scc / sc / spawncompanion  — заспавнить бота рядом с игроком
-scc kill / sc k            — удалить всех ботов
+scc kill / sc k            — удалить всех ботов (сброс личности, истории, отношений)
+scc follow / sc f          — бот начинает следовать за игроком
+scc stop / sc s            — бот прекращает следовать
+scc give / sc g <item> [count]  — передать предмет боту
+scc take / sc t <item> [count]  — забрать предмет у бота
+scc list / sc l            — показать инвентарь бота
 ```
 
 ## Архитектура
