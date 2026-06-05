@@ -1,4 +1,6 @@
 
 .env
 data/*.json
+bun.lock
+node_modules/
 

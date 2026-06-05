@@ -1,15 +1,34 @@
+import * as fs from "fs";
+import * as path from "path";
+
 const STATE_FILE = "/data/memory.json";
 const HISTORY_FILE = "/data/history.json";
 const SELF_FILE = "/data/self.json";
 const MAX_HISTORY = 20;
 
-let facts = [];
-let history = [];
-let selfInfo = null;
+interface FactEntry {
+  key: string;
+  value: string;
+  created: number;
+  updated: number;
+}
 
-function load() {
+interface HistoryEntry {
+  role: string;
+  content: string;
+}
+
+interface SelfEntry {
+  text: string;
+  created: number;
+}
+
+let facts: FactEntry[] = [];
+let history: HistoryEntry[] = [];
+let selfInfo: SelfEntry | null = null;
+
+function load(): void {
   try {
-    const fs = require("fs");
     if (fs.existsSync(STATE_FILE)) {
       facts = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
     }
@@ -22,20 +41,19 @@ function load() {
   } catch {}
 }
 
-function save() {
+function save(): void {
   try {
-    const fs = require("fs");
-    const dir = require("path").dirname(STATE_FILE);
+    const dir = path.dirname(STATE_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(STATE_FILE, JSON.stringify(facts, null, 2));
     fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
     fs.writeFileSync(SELF_FILE, JSON.stringify(selfInfo, null, 2));
-  } catch (e) {
+  } catch (e: any) {
     console.error(`[Mem] Save error: ${e.message}`);
   }
 }
 
-function addFact(key, value) {
+export function addFact(key: string, value: string): void {
   const existing = facts.find((f) => f.key === key);
   if (existing) {
     existing.value = value;
@@ -46,16 +64,16 @@ function addFact(key, value) {
   save();
 }
 
-function getFacts() {
+export function getFacts(): FactEntry[] {
   return [...facts];
 }
 
-function getContextString() {
+export function getContextString(): string {
   if (facts.length === 0) return "";
   return facts.map((f) => `- ${f.key}: ${f.value}`).join("\n");
 }
 
-function addMessage(role, content) {
+export function addMessage(role: string, content: string): void {
   history.push({ role, content });
   if (history.length > MAX_HISTORY) {
     history = history.slice(history.length - MAX_HISTORY);
@@ -63,25 +81,25 @@ function addMessage(role, content) {
   save();
 }
 
-function getHistory() {
+export function getHistory(): HistoryEntry[] {
   return [...history];
 }
 
-function setSelf(info) {
+export function setSelf(info: string): void {
   selfInfo = { text: info, created: Date.now() };
   save();
 }
 
-function getSelf() {
+export function getSelf(): string | null {
   return selfInfo?.text || null;
 }
 
-function clearSelf() {
+export function clearSelf(): void {
   selfInfo = null;
   save();
 }
 
-function resetAll() {
+export function resetAll(): void {
   facts = [];
   history = [];
   selfInfo = null;
@@ -89,5 +107,3 @@ function resetAll() {
 }
 
 load();
-
-module.exports = { addFact, getFacts, getContextString, addMessage, getHistory, setSelf, getSelf, clearSelf, resetAll };

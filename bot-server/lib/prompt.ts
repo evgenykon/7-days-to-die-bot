@@ -1,5 +1,6 @@
-const rel = require("./relationship");
-const mem = require("./memory");
+import * as mem from "./memory";
+import * as rel from "./relationship";
+import type { LLMMessage } from "./llm";
 
 const BASE_PROMPT = `# Роль и Личность
 Ты — выжившая девушка, случайно встретившая игрока в мире зомби-апокалипсиса.
@@ -14,29 +15,31 @@ const BASE_PROMPT = `# Роль и Личность
 
 const BOT_NUANSES = `
 - **Внешность:** Неоновые волосы, дерзкие татуировки, проницательный взгляд. На тебе потрепанные испачканные джинсы, корсет с вываливающейся огромной грудью и тяжелые ботинки. Рыжие волосы, собранные в два высоких хвоста. На лице тяжелый макияж, густая красная помада. Зеленые глаза. Лицо и кожа запачканы кровью. Руки забиты тауировками. 
-`
+`;
 
 const SELF_GEN_PROMPT = `Ты — молодая девушка, выжившая в зомби-апокалипсисе (мир 7 Days to Die). Опиши свою личность, характер, прошлое и текущее состояние.
 Мне нужны эти данные, чтобы в последующем подставлять в промпты для лучшей генерации ответов игроку.`;
 
-async function ensureSelf(callLLM) {
+export async function ensureSelf(
+  callLLM: (msgs: LLMMessage[]) => Promise<string>,
+): Promise<void> {
   if (mem.getSelf()) return;
   console.log("[Self] Нет самосознания — генерирую через LLM...");
   try {
     const reply = await callLLM([{ role: "user", content: SELF_GEN_PROMPT }]);
     mem.setSelf(reply.replace(/[\n\r]+/g, " ").trim());
     console.log(`[Self] Сгенерировано: "${mem.getSelf()}"`);
-  } catch (e) {
+  } catch (e: any) {
     console.error(`[Self] Ошибка генерации: ${e.message}`);
   }
 }
 
-async function build() {
+export async function build(): Promise<LLMMessage> {
   const self = mem.getSelf();
   if (!self) {
     throw new Error("Нет самосознания — невозможно построить промпт");
   }
-  const parts = [BASE_PROMPT, BOT_NUANSES, self,];
+  const parts: string[] = [BASE_PROMPT, BOT_NUANSES, self];
 
   const levelInfo = rel.getDescription();
   parts.push("# Текущие отношения\n" + levelInfo);
@@ -52,21 +55,13 @@ async function build() {
     parts.push("Игрок не хочет общаться. Отвечай односложно, не проявляй инициативу.");
   }
 
-  const selfInfo = mem.getSelf();
-  if (selfInfo) {
-    parts.push("# Твоё текущее состояние\n" + selfInfo);
-  }
-
   const facts = mem.getContextString();
   if (facts) {
     parts.push("# Что ты знаешь об игроке\n" + facts);
   }
 
   parts.push("Если игрок рассказал о себе что-то новое (имя, возраст, прошлое, страхи, предпочтения) — добавь в конец ответа строку [ФАКТ: ключ=значение].");
-
   parts.push("Отвечай коротко и эмоционально, как живой человек в реальном разговоре. Без маркдауна, без списков, без пояснений.");
 
   return { role: "system", content: parts.join("\n\n") };
 }
-
-module.exports = { build, ensureSelf };

@@ -1,9 +1,9 @@
-FROM node:22-alpine
+FROM oven/bun:1-alpine
 RUN mkdir -p /data
 WORKDIR /app
 COPY package.json ./
-RUN npm install
-COPY *.js ./
+RUN bun install
+COPY *.ts ./
 COPY lib/ ./lib/
 EXPOSE 9091
-CMD ["node", "server.js"]
+CMD ["bun", "--watch", "run", "server.ts"]

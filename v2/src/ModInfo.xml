@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<xml>
-  <Name value="CompanionBot" />
-  <DisplayName value="AI Companion Bot v2" />
-  <Description value="LLM-powered companion for 7DTD" />
-  <Author value="AI-7D2D" />
-  <Version value="2.0.0" />
-  <SkipWithAntiCheat value="true" />
-</xml>

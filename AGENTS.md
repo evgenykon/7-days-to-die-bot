@@ -42,25 +42,24 @@
 - **scc kill** — удаление всех ботов
 - **IModApi (BotModInit)** — автозапуск HTTP сервера при старте мода
 - **HTTP сервер** (порт 9090) — /health, /status, /chat, /follow, /stop
-- **Bot Server** (порт 9091) — Node.js прокси к игре, Docker
+- **Bot Server** (порт 9091) — Bun + Hono прокси к игре, Docker
 - **PiperServer** (порт 9092) — C# .NET 4.8, TTS через piper.exe, запуск через run.bat
-- **stop.bat / taskkill** — остановка PiperServer
 
 ## Первый запуск (setup)
 
 1. `powershell -ExecutionPolicy Bypass -File deploy.ps1`
 2. Запускать игру — HTTP сервер стартует автоматически (IModApi)
    - Игра слушает `0.0.0.0:9090` (нативно через TcpListener, не HttpListener)
-3. `.\start-all.bat` — запускает Bot Server (Docker) + PiperServer
+3. `.\start-all.bat` — запускает Bot Server (Bun/Docker) + PiperServer
    - Bot Server: порт 9091
    - PiperServer: порт 9092
 
 ## Архитектура
 
 ```
-Игра (C# мод, порт 9090, TcpListener) ← Docker → Bot Server (Node.js, порт 9091) ← → LLM API
+Игра (C# мод, порт 9090, TcpListener) ← Docker → Bot Server (Bun + Hono, порт 9091) ← → LLM API
    ↑
-   └── PiperServer (C#, порт 9092) → piper.exe → TTS (колонки)
+   └── PiperServer (Docker, порт 9092) → piper Linux → TTS
 ```
 
 ## API (игра, порт 9090)
@@ -166,19 +165,20 @@ taskkill /f /im PiperServer.exe
 ### Файловая структура bot-server
 ```
 bot-server/
-├── server.js          # HTTP роутер, processChat
-├── Dockerfile         # node:22-alpine
+├── server.ts          # HTTP роутер, processChat (Hono + Bun)
+├── Dockerfile         # oven/bun:1-alpine
 ├── docker-compose.yml # bot-server + piper-server
 ├── .env               # OPENROUTER_API_KEY, LLM_MODEL
 ├── .gitignore
+├── tsconfig.json      # ESNext, bun types
 ├── lib/
-│   ├── http.js        # httpPost (http + https), parseBody, json
-│   ├── llm.js         # callLLM (OpenRouter / LM Studio)
-│   ├── game.js        # sendChat, sendPlayWav и т.д.
-│   ├── piper.js       # speak (Piper Docker)
-│   ├── relationship.js # уровни отношений, сентимент
-│   ├── memory.js      # RAG факты + история диалога
-│   └── prompt.js      # динамический system prompt
+│   ├── http.ts        # fetch-обёртка, parseBody, json
+│   ├── llm.ts         # callLLM (OpenRouter)
+│   ├── game.ts        # sendChat, sendPlayWav и т.д.
+│   ├── piper.ts       # speak (Piper Docker)
+│   ├── relationship.ts # уровни отношений, сентимент
+│   ├── memory.ts      # RAG факты + история + самосознание
+│   └── prompt.ts      # динамический system prompt + ensureSelf
 └── data/              # volume, персистентные файлы
 ```
 
@@ -187,5 +187,5 @@ bot-server/
 - `data/*.json` в .gitignore — состояние не коммитится
 - Piper TTS только в Docker (Linux), Windows binaries не нужны
 - При смене модели в OpenRouter — поменять `LLM_MODEL` в `.env`
-- LN Studio больше не нужен (OpenRouter API вместо локальной модели)
+- LM Studio больше не нужен (OpenRouter API вместо локальной модели)
 - Для билда C# мода: `dotnet build src/CompanionBot -c Release` (игра должна быть закрыта, иначе DLL locked)
