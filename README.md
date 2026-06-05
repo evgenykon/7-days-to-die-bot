@@ -47,6 +47,6 @@ AGENTS.md               — история: что пробовали, что н
 src/CompanionBot/       — C# мод (.NET 4.8)
 bot-server/             — Node.js прокси + Docker + Piper TTS
 v1/ v2/                 — неудачные попытки (архив)
-related_mods/           — SCore/NPCCore (не используются)
+related_mods/           — SCore/NPCCore (используются)
 deploy.ps1              — деплой
 start-all.bat           — запуск bot-server + Piper
