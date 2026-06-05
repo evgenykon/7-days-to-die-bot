@@ -6,6 +6,7 @@ const { speak } = require("./lib/piper");
 const rel = require("./lib/relationship");
 const mem = require("./lib/memory");
 const prompt = require("./lib/prompt");
+const { ensureSelf } = prompt;
 
 const PIPER_URL = process.env.PIPER_URL || "http://piper-server:9092";
 const TTS_LENGTH = parseFloat(process.env.TTS_LENGTH || "0.85");
@@ -14,29 +15,9 @@ function log(msg) {
   console.log(`[${new Date().toISOString()}] ${msg}`);
 }
 
-const SELF_GEN_PROMPT = `Ты — Квинн, выжившая в зомби-апокалипсисе (мир 7 Days to Die). Опиши своё текущее состояние и самоощущение одним абзацем. Расскажи коротко: какое у тебя настроение прямо сейчас, чего хочется, что беспокоит, есть ли голод/холод/страх, что ты видишь вокруг. От первого лица, 2-3 предложения, без ё, без маркдауна, без пояснений.`;
-
-async function ensureSelf(callLLM) {
-  if (!mem.getSelf()) {
-    log("[Self] Нет самосознания — генерирую через LLM...");
-    try {
-      const reply = await callLLM([{ role: "user", content: SELF_GEN_PROMPT }]);
-      mem.setSelf(reply.replace(/[\n\r]+/g, " ").trim());
-      log(`[Self] Сгенерировано: "${mem.getSelf()}"`);
-    } catch (e) {
-      log(`[Self] Ошибка генерации: ${e.message}`);
-    }
-  }
-}
-
 function processChat(sender, message) {
   log(`Chat from ${sender}: "${message}"`);
   rel.processMessage(message);
-
-  // Сгенерировать самосознание, если его ещё нет
-  if (!mem.getSelf()) {
-    ensureSelf(callLLM).catch((e) => log(`[Self] Фоновая генерация: ${e.message}`));
-  }
 
   const history = mem.getHistory();
   const msgs = [prompt.build(), ...history, { role: "user", content: message }];
@@ -111,8 +92,24 @@ const server = http.createServer(async (req, res) => {
       if (body.type === "chat" && body.message) {
         processChat(body.sender || "?", body.message);
       }
-      if (body.type === "bot_damaged" || body.type === "player_damaged") {
-        processChat("System", body.type === "bot_damaged" ? "Квин получает урон" : "Игрок получает урон");
+      if (body.type === "bot_damaged") {
+        processChat("System", `Квин получает урон: ${body.damage || "?"} хп, осталось ${body.health || "?"}/${body.maxHealth || "?"}`);
+      }
+      if (body.type === "player_damaged") {
+        processChat("System", `Игрок получает урон: ${body.damage || "?"} хп, осталось ${body.health || "?"}/${body.maxHealth || "?"}`);
+      }
+      if (body.type === "entity_killed") {
+        const isBotKill = body.killed === "companionBot" || (body.killer === "player" && body.killed && body.killed !== "companionBot");
+        const isPlayerKill = body.killer === "player" && body.killed && body.killed !== "companionBot";
+        const isBotDead = body.killed === "companionBot";
+
+        if (isBotDead) {
+          log("[Event] Бот убит — очищаю самосознание");
+          mem.clearSelf();
+          processChat("System", "Квин умирает...");
+        } else if (isPlayerKill) {
+          processChat("System", `Игрок убил ${body.killed}`);
+        }
       }
       json(res, { ok: true });
 
@@ -169,9 +166,9 @@ server.listen(PORT, async () => {
   console.log(`[Server] LLM URL: ${process.env.LLM_URL || "http://host.docker.internal:1234"}`);
   console.log(`[Server] Piper URL: ${PIPER_URL} (speed: ${TTS_LENGTH})`);
   console.log(`[Server] Relationship: ${rel.getLevelName()}, ${rel.getMessageCount()} msgs`);
-  if (mem.getSelf()) {
+  if (!mem.getSelf()) {
+    console.log(`[Server] Генерируем самосознание ...`);
+    await ensureSelf(callLLM);
     console.log(`[Server] Самосознание: "${mem.getSelf()}"`);
-  } else {
-    console.log("[Server] Самосознание отсутствует — будет сгенерировано при первом сообщении");
   }
 });
