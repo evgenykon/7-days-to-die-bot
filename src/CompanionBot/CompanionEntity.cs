@@ -11,7 +11,7 @@ public class CompanionEntity : EntityAlive
     private const float MoveSpeed = 0.1f;
     private const float RetreatSpeed = 0.15f;
     private const float SmoothFactor = 0.12f;
-    private bool _followEnabled = true;
+    private bool _followEnabled = false;
 
     public void SetFollowMode(bool enabled)
     {

@@ -88,6 +88,11 @@ function advanceLevel(): boolean {
   return false;
 }
 
+export function reset(): void {
+  state = defaultState();
+  save();
+}
+
 export function processMessage(playerMessage: string): void {
   state.messageCount++;
   adjustSentiment(playerMessage);

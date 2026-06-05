@@ -25,7 +25,7 @@ function getHeaders(): Record<string, string> {
     return {
       Authorization: `Bearer ${OPENROUTER_KEY}`,
       "HTTP-Referer": "https://github.com/ai-7d2d",
-      "X-Title": "7D2D Companion Путница",
+      "X-Title": "7D2D Companion Putnitsa",
     };
   }
   return {};
@@ -33,6 +33,11 @@ function getHeaders(): Record<string, string> {
 
 export async function callLLM(messages: LLMMessage[]): Promise<string> {
   const headers = getHeaders();
+  const lastUser = messages.filter(m => m.role === "user").pop();
+  const systemLen = messages.filter(m => m.role === "system").reduce((a, m) => a + m.content.length, 0);
+  const sysPreview = messages.find(m => m.role === "system")?.content.substring(0, 120).replace(/\n/g, "\\n") || "";
+  console.log(`[LLM] ${messages.length} msgs (system: ${systemLen}ch) | first system: "${sysPreview}..."`);
+  if (lastUser) console.log(`[LLM] last user: "${lastUser.content.substring(0, 120)}"`);
   try {
     const json = await httpPost<LLMResponse>(LLM_URL, "/chat/completions", {
       model: LLM_MODEL,

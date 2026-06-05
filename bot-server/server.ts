@@ -29,22 +29,34 @@ function ensureSelfAsync(): Promise<void> {
 
 async function processChat(sender: string, message: string): Promise<void> {
   await ensureSelfAsync();
+  if (!mem.getSelf()) {
+    log(`[Chat] Self generation failed — retrying...`);
+    _selfPromise = null;
+    await ensureSelfAsync();
+  }
   log(`Chat from ${sender}: "${message}"`);
   rel.processMessage(message);
 
   const history = mem.getHistory();
+  if (!mem.getSelf()) {
+    log(`[Chat] No self — skipping LLM, sending fallback`);
+    sendChat("Путница", "..." ).catch(() => {});
+    return;
+  }
   const systemPrompt = await build();
   const llmMsgs = [systemPrompt, ...history.map(h => ({ role: h.role as "user" | "assistant", content: h.content })), { role: "user" as const, content: message }];
 
   const raw = await callLLM(llmMsgs);
-  const facts = raw.match(/\[ФАКТ:\s*([^=]+)=([^\]]+)\]/g);
+  // ФАКТ может содержать ударения (U+0301), regex их игнорирует
+  const factRe = /\[ФА\u0301?КТ:\s*([^=]+?)\s*=\s*([^\]]+?)\s*\]/g;
+  const facts = [...raw.matchAll(factRe)];
   let reply = raw;
-  if (facts) {
-    facts.forEach((f) => {
-      const m = f.match(/\[ФАКТ:\s*([^=]+)=([^\]]+)\]/);
-      if (m) mem.addFact(m[1].trim(), m[2].trim());
+  if (facts.length > 0) {
+    facts.forEach((m) => {
+      mem.addFact(m[1].trim(), m[2].trim());
     });
-    reply = raw.replace(/\[ФАКТ:[^\]]*\]\s*/g, "").trim();
+    reply = raw.replace(factRe, "").trim();
+    log(`[Facts] Extracted ${facts.length} facts: ${facts.map(f => `${f[1]}=${f[2]}`).join(", ")}`);
   }
   mem.addMessage("user", message);
   mem.addMessage("assistant", reply);
@@ -115,18 +127,28 @@ app.post("/event", async (c) => {
     processChat(body.sender || "?", body.message);
   }
   if (body.type === "bot_damaged") {
-    processChat("System", `Путница получает урон: ${body.damage || "?"} хп, осталось ${body.health || "?"}/${body.maxHealth || "?"}`);
+    processChat("System", `Ты получаешь урон: ${body.damage || "?"} хп, у тебя осталось ${body.health || "?"}/${body.maxHealth || "?"}`);
   }
   if (body.type === "player_damaged") {
     processChat("System", `Игрок получает урон: ${body.damage || "?"} хп, осталось ${body.health || "?"}/${body.maxHealth || "?"}`);
   }
+  if (body.type === "bot_spawned") {
+    log("[Event] Бот заспавнен — генерирую новое самосознание");
+    _selfPromise = null;
+    ensureSelfAsync().then(() => {
+      log(`[Event] Новое самосознание: "${mem.getSelf()}"`);
+    });
+  }
+
   if (body.type === "entity_killed") {
     if (body.killed === "companionBot") {
-      log("[Event] Бот убит — очищаю самосознание");
-      mem.clearSelf();
-      processChat("System", "Путница умирает...");
+      log("[Event] Бот погиб — уничтожаю личность и его историю");
+      processChat("System", "Ты чувствуешь дикую слабость, темнеет в глазах. Твоё тело больше не слушается — ты умираешь.").then(() => {
+        mem.resetAll();
+        rel.reset();
+      });
     } else if (body.killer === "player" && body.killed && body.killed !== "companionBot") {
-      processChat("System", `Игрок убил ${body.killed}`);
+      processChat("System", `Игрок убил врага: ${body.killed}. Скажи что-то ободряющее, поддержи игрока.`);
     }
   }
 
@@ -144,7 +166,19 @@ app.post("/send", async (c) => {
 });
 
 app.post("/follow", async (c) => {
+  const level = rel.getLevel();
+  const sentiment = rel.getSentiment();
+  const tooSoon = level < 1 || sentiment === "angry" || sentiment === "rejecting";
+  if (tooSoon) {
+    const msg = level < 1
+      ? "Ты ещё не заслужил моё доверие. Я не пойду с тобой."
+      : "Я обижена на тебя. Не пойду.";
+    processChat("System", `Игрок просит следовать за ним. Откажись. Твоя причина: "${msg}"`);
+    log(`[Follow] Refused: level=${level} sentiment=${sentiment}`);
+    return c.json({ ok: false, reason: msg });
+  }
   const data = await sendFollow();
+  log(`[Follow] Accepted: level=${level} sentiment=${sentiment}`);
   return c.json(data);
 });
 

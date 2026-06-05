@@ -11,7 +11,7 @@ public class ConsoleCmdSpawnCompanion : ConsoleCmdAbstract
 
     public override string getDescription()
     {
-        return "Spawns/kills companion bots. Use 'kill' to remove all.";
+        return "Spawns/kills companion bots. Commands: kill, follow/f, stop/s, give/g, take/t, list/l.";
     }
 
     public override void Execute(List<string> _params, CommandSenderInfo _senderInfo)
@@ -20,6 +20,8 @@ public class ConsoleCmdSpawnCompanion : ConsoleCmdAbstract
         {
             var cmd = _params[0].ToLower();
             if (cmd == "kill" || cmd == "k") { KillAllCompanions(); return; }
+            if (cmd == "follow" || cmd == "f") { BotHttpServer.SetFollowState(true); SdtdConsole.Instance.Output("Bot will follow."); return; }
+            if (cmd == "stop" || cmd == "s") { BotHttpServer.SetFollowState(false); SdtdConsole.Instance.Output("Bot stopped."); return; }
             if (cmd == "give" || cmd == "g") { GiveToBot(_params); return; }
             if (cmd == "take" || cmd == "t") { TakeFromBot(_params); return; }
             if (cmd == "list" || cmd == "l") { ListInventory(); return; }
@@ -83,6 +85,7 @@ public class ConsoleCmdSpawnCompanion : ConsoleCmdAbstract
             GameManager.Instance.World.SpawnEntityInWorld(entity);
             SdtdConsole.Instance.Output($"Spawned companionBot! ID={entity.entityId} Type={entity.GetType().Name}");
             Log.Out($"[CB] Spawned: ID={entity.entityId} Type={entity.GetType().Name}");
+            BotHttpServer.ForwardEvent("bot_spawned", $"\"entityId\":{entity.entityId}");
         }
         catch (Exception ex)
         {
