@@ -95,7 +95,7 @@ export async function buildEvent(eventDescription: string): Promise<LLMMessage> 
     BASE_PROMPT, BOT_NUANSES, self,
     "# Активное событие",
     `С тобой происходит: ${eventDescription}`,
-    "Опиши свои ощущения коротко, 1-2 предложения, от первого лица. Не задавай вопросов. Не добавляй [ФАКТ].",
+    "Опиши свои ощущения коротко, 1 предложение, от первого лица. Не задавай вопросов. Не добавляй [ФАКТ].",
   ];
   return { role: "system", content: parts.join("\n\n") };
 }
