@@ -83,6 +83,15 @@ async function processChat(sender: string, message: string): Promise<void> {
     reply = raw.replace(factRe, "").trim();
     log(`[Facts] Extracted ${facts.length} facts: ${facts.map(f => `${f[1]}=${f[2]}`).join(", ")}`);
   }
+
+  const sentRe = /\[SENTIMENT:\s*(loyal|angry|rejecting)\s*\]/i;
+  const sentMatch = reply.match(sentRe);
+  if (sentMatch) {
+    rel.setSentiment(sentMatch[1].toLowerCase() as "loyal" | "angry" | "rejecting");
+    reply = reply.replace(sentRe, "").trim();
+    log(`[Sentiment] LLM установил: ${sentMatch[1].toLowerCase()}`);
+  }
+
   mem.addMessage("user", message);
   mem.addMessage("assistant", reply);
   log(`LLM reply: "${reply}" (level=${rel.getLevelName()}, sentiment=${rel.getSentiment()})`);

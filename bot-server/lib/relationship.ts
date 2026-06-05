@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 const STATE_FILE = "/data/relationship.json";
-const LEVELS = ["незнакомы", "tentative", "trusting", "friendly"] as const;
+const LEVELS = ["незнакомы", "tentative", "trusting", "friendly", "in love"] as const;
 const SENTIMENTS = ["loyal", "angry", "rejecting"] as const;
 
 type Level = number;
@@ -59,13 +59,18 @@ export function getSentiment(): Sentiment {
   return state.sentiment;
 }
 
+export function setSentiment(s: Sentiment): void {
+  state.sentiment = s;
+  save();
+}
+
 export function getMessageCount(): number {
   return state.messageCount;
 }
 
 function adjustSentiment(playerMessage: string): Sentiment {
   const lower = (playerMessage || "").toLowerCase();
-  const angryWords = ["отстань", "заткнись", "иди нахуй", "не лезь", "отвали", "заебал"];
+  const angryWords = ["отстань", "заткнись", "иди нахер", "не лезь", "отвали", "глупая", "идиотка", "ненавижу"];
   const kindWords = ["спасибо", "хорошо", "да", "расскажи", "помоги", "друг", "милая", "умница"];
 
   if (angryWords.some((w) => lower.includes(w))) {
@@ -98,7 +103,7 @@ export function processMessage(playerMessage: string): void {
   adjustSentiment(playerMessage);
 
   if (state.sentiment === "loyal") {
-    const thresholds = [3, 10, 25];
+    const thresholds = [3, 10, 25, 50];
     if (state.messageCount >= thresholds[state.level]) {
       advanceLevel();
     }
@@ -115,6 +120,7 @@ export function getDescription(): string {
     "Путница начинает привыкать, намекает на совместное выживание в этом мёртвом мире.",
     "Путница доверяет, делится страхами. Ей важно твоё мнение.",
     "Путница заботится о тебе, спрашивает о жизни, готова говорить о прошлом и будущем.",
+    "Путница влюблена в тебя. Она ищет твоего внимания, ревнует, говорит комплименты, боится тебя потерять.",
   ];
   return descs[state.level] || descs[0];
 }
