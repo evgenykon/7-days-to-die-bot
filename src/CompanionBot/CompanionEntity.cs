@@ -3,6 +3,7 @@ using UnityEngine;
 public class CompanionEntity : EntityAlive
 {
     private Vector3 _smoothDir;
+    private readonly ItemStack[] _inventory = new ItemStack[20];
     private float _lastHealth = -1f;
     private float _lastPlayerHealth = -1f;
     private const float FollowDist = 1.5f;
@@ -22,9 +23,13 @@ public class CompanionEntity : EntityAlive
         }
     }
 
+    public ItemStack[] GetInventory() => _inventory;
+
     public override void PostInit()
     {
         base.PostInit();
+        for (int i = 0; i < _inventory.Length; i++)
+            _inventory[i] = ItemStack.Empty.Clone();
         IsGodMode.Value = false;
         SetSpawnerSource(EnumSpawnerSource.Biome);
         PhysicsTransform.gameObject.SetActive(true);
