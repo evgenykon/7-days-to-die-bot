@@ -26,6 +26,10 @@
       <HintPath>$(GamePath)\7DaysToDie_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>$(GamePath)\7DaysToDie_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="LogLibrary">
       <HintPath>$(GamePath)\7DaysToDie_Data\Managed\LogLibrary.dll</HintPath>
       <Private>false</Private>

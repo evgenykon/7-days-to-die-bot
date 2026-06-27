@@ -9,6 +9,15 @@ AI Companion for 7 Days to Die.
 - **.NET 8 SDK** (для bot-server, опционально)
 - **Docker Desktop** (для bot-server + Piper TTS, опционально)
 
+## Фикс Discord (если игра виснет при старте)
+
+Игра может зависать на экране с логотипом из-за попытки подключиться к Discord.
+Флаг `-nodicord` **не работает**. Надо выключить Discord в реестре:
+
+```powershell
+.\fix-discord.ps1
+```
+
 ## Сборка C# мода
 
 ```powershell

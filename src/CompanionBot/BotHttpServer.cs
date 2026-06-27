@@ -179,8 +179,13 @@ public class BotHttpServer
                 statusCode = 200;
                 var player = GameManager.Instance.World?.GetPrimaryPlayer();
                 var pos = player?.position ?? Vector3.zero;
+                var botPos = GetFirstBotPosition();
+                var distance = player != null && botPos != null
+                    ? Vector3.Distance(pos, botPos.Value) : -1f;
                 return SerializeJson(Dict("ok", true,
                     "playerX", pos.x, "playerY", pos.y, "playerZ", pos.z,
+                    "botX", botPos?.x ?? 0, "botY", botPos?.y ?? 0, "botZ", botPos?.z ?? 0,
+                    "botDistance", distance,
                     "botCount", GetBotCount()));
             }
             else if (path == "/health" && method == "GET")
@@ -198,29 +203,24 @@ public class BotHttpServer
                     statusCode = 400;
                     return SerializeJson(Dict("error", "wav is required"));
                 }
-                var tmp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"tts_{Guid.NewGuid():N}.wav");
-                ThreadPool.QueueUserWorkItem(_ =>
-                {
-                    try
-                    {
-                        var bytes = Convert.FromBase64String(b64);
-                        System.IO.File.WriteAllBytes(tmp, bytes);
-                        Log.Out($"[CB] Playing TTS ({bytes.Length} bytes)");
-                        SetTalking(true);
-                        using (var player = new System.Media.SoundPlayer(tmp))
-                            player.PlaySync();
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error($"[CB] Play WAV error: {ex.Message}");
-                    }
-                    finally
-                    {
-                        SetTalking(false);
-                        try { if (System.IO.File.Exists(tmp)) System.IO.File.Delete(tmp); } catch { }
-                    }
-                });
+                var bytes = Convert.FromBase64String(b64);
+                Log.Out($"[CB] Scheduling TTS ({bytes.Length} bytes)");
+                SetTalking(true);
+                ScheduleWavToBots(bytes);
                 return SerializeJson(Dict("ok", true));
+            }
+            else if (path == "/volume" && method == "POST")
+            {
+                statusCode = 200;
+                var data = ParseJson(body);
+                var volStr = GetJsonString(data, "volume");
+                if (volStr != null && float.TryParse(volStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var vol))
+                {
+                    SetVolume(vol);
+                    return SerializeJson(Dict("ok", true, "volume", vol));
+                }
+                statusCode = 400;
+                return SerializeJson(Dict("error", "volume is required"));
             }
             else
             {
@@ -278,6 +278,32 @@ public class BotHttpServer
         }
     }
 
+    private static void ScheduleWavToBots(byte[] wavData)
+    {
+        try
+        {
+            var world = GameManager.Instance.World;
+            if (world == null) return;
+            foreach (var kv in world.Entities.dict)
+                if (kv.Value is CompanionEntity bot)
+                    bot.ScheduleWav(wavData);
+        }
+        catch (Exception ex) { Log.Error($"[CB] ScheduleWav error: {ex.Message}"); }
+    }
+
+    private static void SetVolume(float vol)
+    {
+        try
+        {
+            var world = GameManager.Instance.World;
+            if (world == null) return;
+            foreach (var kv in world.Entities.dict)
+                if (kv.Value is CompanionEntity bot)
+                    bot.SetVolume(vol);
+        }
+        catch (Exception ex) { Log.Error($"[CB] SetVolume error: {ex.Message}"); }
+    }
+
     public static void SetFollowState(bool follow)
     {
         try
@@ -309,6 +335,20 @@ public class BotHttpServer
             return count;
         }
         catch { return 0; }
+    }
+
+    private static Vector3? GetFirstBotPosition()
+    {
+        try
+        {
+            var world = GameManager.Instance.World;
+            if (world == null) return null;
+            foreach (var kv in world.Entities.dict)
+                if (kv.Value is CompanionEntity bot)
+                    return bot.position;
+            return null;
+        }
+        catch { return null; }
     }
 
     private static Dictionary<string, object> Dict(params object[] args)

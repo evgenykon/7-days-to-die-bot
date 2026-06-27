@@ -11,6 +11,7 @@ const PIPER_URL = process.env.PIPER_URL || "http://localhost:9092";
 const TTS_LENGTH = parseFloat(process.env.TTS_LENGTH || "0.85");
 
 let _selfPromise: Promise<void> | null = null;
+let _paused = true;
 
 function log(msg: string): void {
   console.log(`[${new Date().toISOString()}] ${msg}`);
@@ -178,6 +179,17 @@ app.post("/event", async (c) => {
     processEvent(body.time === "day" ? "Наступило утро, светает. Ты чувствуешь облегчение." : "Наступила ночь, темнеет. Ты чувствуешь тревогу.");
   }
 
+  if (body.type === "player_joined" || body.type === "player_spawned") {
+    _paused = false;
+    mem.updateActivity();
+    log(`[Event] Игрок ${body.type === "player_joined" ? "зашёл" : "заспавнился"} — таймеры возобновлены`);
+  }
+
+  if (body.type === "player_disconnected") {
+    _paused = true;
+    log("[Event] Игрок вышел — таймеры остановлены");
+  }
+
   if (body.type === "entity_killed") {
     if (body.killed === "companionBot") {
       log("[Event] Бот погиб — уничтожаю личность и его историю");
@@ -244,38 +256,52 @@ app.post("/speak", async (c) => {
   const tts = await speak(body.text, body.length_scale).catch((e: Error) => ({ error: e.message }));
   return c.json(tts || { error: "no response" });
 });
-
 const IDLE_MINUTES = parseFloat(process.env.IDLE_MINUTES || "2");
+const IDLE_MAX_DISTANCE = parseFloat(process.env.IDLE_MAX_DISTANCE || "30");
 setInterval(() => {
-  const idle = (Date.now() - mem.getLastActivity()) / 60000;
-  if (idle > IDLE_MINUTES && mem.getSelf()) {
-    log(`[Idle] ${idle.toFixed(1)} мин без диалога — инициирую разговор`);
-    processChat("System", `Ты давно молчишь. Нужно разрядить обстановку — скажи что-то игроку, задай вопрос, прояви инициативу.
-      Лучше всего сделать комплимент, начать с "Мне нравится, как ты ...". 
-      Или о своей красоте, например "как ты думаешь, я красивая?"
-      Или о че-то интмимном, например "я не могу оторвать взгляд от твоих рук, они такие сильные и мужественные"
-      Или спросить о его опыте выживания, например "расскажи, как ты научился выживать в этом мире?"
-      Или спросить о его страхах, например "чего ты боишься в этом мире?"
-      Или спросить о его предпочтениях, например "какая у тебя любимая еда в этом мире?"
-      Или спросить что он чувствует по отношению к тебе, например "как ты ко мне относишься?"
-      Желательно не повторять вопросы.
-      `);
-  }
+  if (_paused) return;
+  getStatus().then((s) => {
+    if (!s.ok) {
+      _paused = true;
+      log(`[Idle] Game unreachable — пауза`);
+      return;
+    }
+    const dist = typeof s.botDistance === "number" ? s.botDistance : -1;
+    if (dist < 0 || dist > IDLE_MAX_DISTANCE) {
+      log(`[Idle] Бот далеко (${dist.toFixed(1)}) — пропускаю`);
+      return;
+    }
+    const idle = (Date.now() - mem.getLastActivity()) / 60000;
+    if (idle > IDLE_MINUTES && mem.getSelf()) {
+      log(`[Idle] ${idle.toFixed(1)} мин без диалога, дистанция ${dist.toFixed(1)} — инициирую разговор`);
+      processChat("System", `Ты давно молчишь. Нужно разрядить обстановку — скажи что-то игроку, задай вопрос, прояви инициативу.
+        Лучше всего сделать комплимент, начать с "Мне нравится, как ты ...". 
+        Или о своей красоте, например "как ты думаешь, я красивая?"
+        Или о че-то интмимном, например "я не могу оторвать взгляд от твоих рук, они такие сильные и мужественные"
+        Или спросить о его опыте выживания, например "расскажи, как ты научился выживать в этом мире?"
+        Или спросить о его страхах, например "чего ты боишься в этом мире?"
+        Или спросить о его предпочтениях, например "какая у тебя любимая еда в этом мире?"
+        Или спросить что он чувствует по отношению к тебе, например "как ты ко мне относишься?"
+        Желательно не повторять вопросы.
+        `);
+    }
+  });
 }, 30000);
 
 const PORT = parseInt(process.env.PORT || "9091");
 
-console.log(`[Server] Bot proxy running on port ${PORT}`);
+console.log(`[Server] === Startup ===`);
+console.log(`[Server] Bot proxy port: ${PORT}`);
 console.log(`[Server] Game mod URL: ${process.env.BOT_URL || "http://localhost:9090"}`);
 console.log(`[Server] LLM URL: ${process.env.LLM_URL || "http://host.docker.internal:1234"}`);
 console.log(`[Server] Piper URL: ${PIPER_URL} (speed: ${TTS_LENGTH})`);
-console.log(`[Server] Relationship: ${rel.getLevelName()}, ${rel.getMessageCount()} msgs`);
-
-ensureSelfAsync().then(() => {
-  if (mem.getSelf()) {
-    console.log(`[Server] Самосознание: "${mem.getSelf()}"`);
-  }
-});
+console.log(`[Server] Idle: timer=${IDLE_MINUTES}min, maxDist=${IDLE_MAX_DISTANCE}, interval=30s`);
+console.log(`[Server] _paused: ${_paused}`);
+console.log(`[Server] Self: ${mem.getSelf() ? "exists" : "none"}`);
+console.log(`[Server] Facts: ${mem.getFacts().length}`);
+console.log(`[Server] History: ${mem.getHistory().length}`);
+console.log(`[Server] Relationship: ${rel.getLevelName()}, ${rel.getMessageCount()} msgs, ${rel.getSentiment()}`);
+console.log(`[Server] Last activity: ${mem.getLastActivity() ? new Date(mem.getLastActivity()).toISOString() : "never"}`);
 
 export default {
   port: PORT,
